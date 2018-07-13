@@ -1,0 +1,35 @@
+Wichtigstes: 
+
+Zwei Züge können gleichzeitig reservieren wenn beide Strecken komplett frei sind.
+
+Dann entsteht folgendes Problem: 
+
+ Bahnhof A(Zug 1) ------ * --------- Bahnhof B(Zug 2)
+
+Zug 1 reserviert linken Abschnitt, Zug 2 reserviert rechten Abschnitt : Deadlock
+
+Deshalb Lösung: 
+
+Man Definiert eine Totale Ordnung auf den Gleisen. Also jedes Gleis eine eindeutige Nummer. z.B:
+
+
+ Bahnhof A(Zug 1) ------1------ * ------2------ Bahnhof B(Zug2)
+
+Wenn jetzt ein Zug eine Strecke reservieren will, muss er immer alle Gleise (siehe Dining Philosophers- Problem), also 1 und 2 in genau der Reihenfolge 
+der Totalen Ordnung reservieren. 
+
+Das bedeutet hier: Zug 1 reserviert Gleis 1 (weil er dies nach Totaler Ordnung tun muss). Nun versucht Zug 2 Gleis 1 zu reservieren (weil er dies nach Totaler Ordnung 
+tun muss) und wird feststellen das dieses Bereits reserviert ist. 
+
+Somit kann es nichtmehr passieren, dass Zug 2 Gleis 2 wegschnappt bevor er Gleis 1 reserviert hat.
+
+
+
+Ansonsten: 
+
+Wann die Züge terminieren und im Recorder angezeigt wird:
+Jeder Zug weiß an welchem Bahnhof er ankommen muss. Wenn er dort angekommen ist, signalisiert er dies der Fahrtdienstleitung. Diese erkennt wenn alle Züge
+angekommen sind und gibt eine Meldung mit dem Recorder aus.
+
+Formales: 
+In dem Dokument zur Beschreibung wie wir vorgehen, keine Klassen oder code angeben.
