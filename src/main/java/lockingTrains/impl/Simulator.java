@@ -60,7 +60,7 @@ public class Simulator {
 	 * @return {@code true} if the simulation ran successfully.
 	 */
 	public static boolean run(final Problem problem, final Recorder recorder) {
-		// TODO Start your implementation here. 
+
 		return false;
 	}
 }
