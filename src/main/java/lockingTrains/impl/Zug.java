@@ -12,6 +12,10 @@ public class Zug implements Runnable{
 
     public Zug (TrainSchedule sched, int i, Map m, FahrtdienstLeitung fahrtdl){
 
+        this.schedule = sched;
+        this.id = i;
+        this.map = m;
+        this.FdL = fahrtdl;
     }
 
 

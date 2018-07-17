@@ -34,7 +34,7 @@ public class OwnMonitor {
      * @return
      */
     synchronized void free_space(){
-        if(reserved < 0){
+        if(reserved > 0){
             reserved--;
         }
     }
@@ -46,5 +46,7 @@ public class OwnMonitor {
     synchronized int getId(){
         return this.id;
     }
+
+    synchronized int getCapacity() { return this.capacity; }
 
 }

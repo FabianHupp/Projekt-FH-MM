@@ -44,4 +44,6 @@ public class GleisMonitor {
     synchronized int getTrain_id(){
         return train_id;
     }
+
+    synchronized boolean getReserved() { return reserved; }
 }
