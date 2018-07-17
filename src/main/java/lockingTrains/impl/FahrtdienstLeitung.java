@@ -14,11 +14,11 @@ public class FahrtdienstLeitung {
     boolean done;
 
     public FahrtdienstLeitung(List<OwnMonitor> loc, Map m, List<GleisMonitor> gle){
-        locations = loc;
-        map = m;
-        gleise = gle;
-        connections =m.connections();
-        done = false;
+        this.locations = loc;
+        this.map = m;
+        this.gleise = gle;
+        this.connections =m.connections();
+        this.done = false;
     }
 
     synchronized boolean checkDone(){
