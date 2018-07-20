@@ -31,7 +31,7 @@ public class Simulator {
 	 *
 	 * @throws IOException if an error occurs while reading the input files.
 	 */
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException{
 		if (args.length != 2) {
 			System.out.println("Usage: <command> <map file> <problem file>");
 			System.exit(1);
@@ -60,7 +60,7 @@ public class Simulator {
 	 *
 	 * @return {@code true} if the simulation ran successfully.
 	 */
-	public static boolean run(final Problem problem, final Recorder recorder) throws InterruptedException{
+	public static boolean run(final Problem problem, final Recorder recorder) {
 		//zuerst die Informationen des Problems auslesen
 		Map map = problem.map();
 		List<TrainSchedule> schedules = problem.schedules();
@@ -104,13 +104,9 @@ public class Simulator {
 		for(Zug z : züge){
 			zug_threads.add(new Thread(z));
 		}
-		for(Thread th : zug_threads){
+		for(Thread th : zug_threads) {
 			th.start();
 		}
-		for(Thread th : zug_threads){
-			th.join();
-		}
-
 
 		//wenn alle Threads terminiert sind (join) dann checkt die FdL ob alle angekommen sind (checkDone), wenn ja dann return true
 		if(FdL.checkDone()){
