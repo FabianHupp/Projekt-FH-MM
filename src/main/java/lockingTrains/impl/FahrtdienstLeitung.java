@@ -3,6 +3,7 @@ package lockingTrains.impl;
 import lockingTrains.shared.Connection;
 import lockingTrains.shared.Map;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class FahrtdienstLeitung {
@@ -23,5 +24,27 @@ public class FahrtdienstLeitung {
 
     synchronized boolean checkDone(){
         return done;
+    }
+
+    public void reserviereGleis(int gleisId, int zugId) {
+        //angenommen die Gleise sind von 0 bis ... durchnummeriert und sind sortiert in der Liste
+        gleise.get(gleisId).reserve(zugId);
+    }
+
+    public List<Connection> avoid(List<Connection> route){
+        int i = 0;
+        List<Connection> avoidList = new ArrayList<>();
+        while (i < route.size()) {
+
+            int id = route.get(i).id();
+
+            //angenommen die Gleise sind von 0 bis ... durchnummeriert und sind sortiert in der Liste
+            if (gleise.get(id).getReserved()) {
+                avoidList.add(route.get(i));
+            }
+
+            i++;
+        }
+        return avoidList;
     }
 }
