@@ -4,6 +4,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import lockingTrains.shared.*;
 import lockingTrains.shared.io.Parser;
@@ -61,6 +64,10 @@ public class Simulator {
 	 * @return {@code true} if the simulation ran successfully.
 	 */
 	public static boolean run(final Problem problem, final Recorder recorder) {
+		//Lock für die Endbedingung einführen
+		Lock lock = new ReentrantLock();
+		Condition FdLFinished = lock.newCondition();	//True when all trains have arrived or sth went wrong
+
 		//zuerst die Informationen des Problems auslesen
 		Map map = problem.map();
 		List<TrainSchedule> schedules = problem.schedules();
@@ -88,14 +95,14 @@ public class Simulator {
 		}
 
 		//Fahrtdienstleitung initialisieren
-		FahrtdienstLeitung FdL = new FahrtdienstLeitung(monitors, map, gleise);
+		FahrtdienstLeitung FdL = new FahrtdienstLeitung(monitors, map, gleise, schedules.size(), recorder, lock);
 
 		//Züge initialisieren
 		List<Zug> züge = new ArrayList<Zug>();
 
 		int i = 0;
 		for(TrainSchedule ts : schedules){
-			züge.add(new Zug(ts,i,map,FdL));
+			züge.add(new Zug(ts,i,map,FdL,recorder));
 			i++;
 		}
 
@@ -108,9 +115,19 @@ public class Simulator {
 			th.start();
 		}
 
-		//wenn alle Threads terminiert sind (join) dann checkt die FdL ob alle angekommen sind (checkDone), wenn ja dann return true
+		//wenn alle Threads terminiert sind (join)
+		for(Thread th :zug_threads){
+			try {
+				th.join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
+		//überprüft ob alle Züge angekommen sind
 		if(FdL.checkDone()){
-				return true;
+			recorder.done();
+			return true;
 		}
 
 		return false;

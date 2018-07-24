@@ -18,7 +18,7 @@ public class GleisMonitor {
      * @return true wenn reserviert wurde, false wenn es gescheitert ist.
      */
     synchronized boolean reserve(int train_id){
-        if(reserved){
+        if(reserved && !(train_id == this.train_id)){
             return false;
         }
         reserved = true;
