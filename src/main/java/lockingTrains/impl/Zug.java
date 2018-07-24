@@ -85,13 +85,13 @@ public class Zug implements Runnable{
                     i++;
                 }
                 //Gleis reservieren, falls schon reserviert geht in avoid List, falls nicht reservieren
-                this.FdL.reserviereGleis(smallestId, this.id);
+                this.FdL.lockGleis(smallestId, this.id);
 
                 //entferne reservierten Teil aus Liste
                 route.remove(route.get(index));
             }
 
-            //bis hier
+            //bis hier alles was du gepusht hattest
         }
 
     }

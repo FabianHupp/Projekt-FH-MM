@@ -6,7 +6,6 @@ import lockingTrains.validation.Recorder;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.Lock;
 
 public class FahrtdienstLeitung {
 
@@ -51,7 +50,7 @@ public class FahrtdienstLeitung {
     synchronized void isArrived(){
             arrived_trains++;
     }
-    
+
     public List<Connection> avoid(List<Connection> route){
         int i = 0;
         List<Connection> avoidList = new ArrayList<>();
