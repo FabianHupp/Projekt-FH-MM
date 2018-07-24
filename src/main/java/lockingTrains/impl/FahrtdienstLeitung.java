@@ -16,9 +16,8 @@ public class FahrtdienstLeitung {
     Map map;
     List<GleisMonitor> gleise;
     Recorder rec;
-    Lock lock;
 
-    public FahrtdienstLeitung(List<OwnMonitor> loc, Map m, List<GleisMonitor> gle, int num_trains, Recorder recorder, Lock lock){
+    public FahrtdienstLeitung(List<OwnMonitor> loc, Map m, List<GleisMonitor> gle, int num_trains, Recorder recorder){
         this.locations = loc;
         this.map = m;
         this.gleise = gle;
@@ -26,7 +25,6 @@ public class FahrtdienstLeitung {
         this.num_trains = num_trains;
         arrived_trains = 0;
         rec = recorder;
-        this.lock = lock;
     }
 
 
@@ -78,5 +76,5 @@ public class FahrtdienstLeitung {
         }
         return avoidList;
     }
-    
+
 }

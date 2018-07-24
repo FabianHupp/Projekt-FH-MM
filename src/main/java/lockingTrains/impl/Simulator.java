@@ -64,10 +64,6 @@ public class Simulator {
 	 * @return {@code true} if the simulation ran successfully.
 	 */
 	public static boolean run(final Problem problem, final Recorder recorder) {
-		//Lock für die Endbedingung einführen
-		Lock lock = new ReentrantLock();
-		Condition FdLFinished = lock.newCondition();	//True when all trains have arrived or sth went wrong
-
 		//zuerst die Informationen des Problems auslesen
 		Map map = problem.map();
 		List<TrainSchedule> schedules = problem.schedules();
@@ -95,7 +91,7 @@ public class Simulator {
 		}
 
 		//Fahrtdienstleitung initialisieren
-		FahrtdienstLeitung FdL = new FahrtdienstLeitung(monitors, map, gleise, schedules.size(), recorder, lock);
+		FahrtdienstLeitung FdL = new FahrtdienstLeitung(monitors, map, gleise, schedules.size(), recorder);
 
 		//Züge initialisieren
 		List<Zug> züge = new ArrayList<Zug>();
@@ -115,7 +111,7 @@ public class Simulator {
 			th.start();
 		}
 
-		//wenn alle Threads terminiert sind (join)
+		//warten bis alle Threads terminiert sind (join)
 		for(Thread th :zug_threads){
 			try {
 				th.join();
@@ -130,6 +126,7 @@ public class Simulator {
 			return true;
 		}
 
+		recorder.done();
 		return false;
 	}
 }
