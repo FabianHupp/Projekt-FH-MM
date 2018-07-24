@@ -12,13 +12,11 @@ public class FahrtdienstLeitung {
     private List<OwnMonitor> locations;
     private List<Connection> connections;
     private int num_trains, arrived_trains;
-    private Map map;
     private List<GleisMonitor> gleise;
    private  Recorder rec;
 
-    public FahrtdienstLeitung(List<OwnMonitor> loc, Map m, List<GleisMonitor> gle, int num_trains, Recorder recorder){
+    public FahrtdienstLeitung(List<OwnMonitor> loc, List<GleisMonitor> gle, int num_trains, Recorder recorder){
         this.locations = loc;
-        this.map = m;
         this.gleise = gle;
         this.connections = m.connections();
         this.num_trains = num_trains;
@@ -47,7 +45,7 @@ public class FahrtdienstLeitung {
         return arrived_trains == num_trains;
     }
 
-    synchronized void isArrived(){
+    synchronized void isFinished(){
             arrived_trains++;
     }
 

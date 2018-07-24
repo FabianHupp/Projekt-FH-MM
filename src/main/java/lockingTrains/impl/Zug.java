@@ -40,20 +40,33 @@ public class Zug implements Runnable{
         List<Connection> empty_avoid_list = new ArrayList<>();
         while(!act_position.equals(destination)){
             List<Connection> route = map.route(act_position, destination, empty_avoid_list);
-            boolean res = tryReserveRoute(route);
-            if(res){
-                drive(route);
-                FdL.isArrived();
-                //hier meldung machen dass man arrived und finished ist
-                rec.arrive(schedule,destination);
-                rec.finish(schedule);
-                return;
-            }else{
-                //weiter im Algorithmus
+            //wenn eine route gefunden wurde
+            if(route != null){
+                //wenn die route leer ist, dann finished, kein arrive event weil man ja schon vorher angekommen ist;
+                // return beendet thread
+                if(route.isEmpty()){
+                    FdL.isFinished();
+                    rec.finish(schedule);
+                    return;
+                }
+                //wenn die route nicht null und nicht leer ist, gibt es eine reservierbare route
+                boolean res = tryReserveRoute(route);
+                if(res){
+                    //wenn man die route reservieren konnte dann darf man fahren
+                    drive(route);
+                    //hier meldung machen dass man arrived und finished ist
+                    FdL.isFinished();
+                    rec.arrive(schedule,destination);
+                    rec.finish(schedule);
+                    return;
+                }else{
+                    //weiter im Algorithmus
+                }
             }
 
-            // von hier deins martine^^... ich kann irgendwie nicht mergen :D
 
+            // ab hier deins martine
+            //hatte vorher vergessen zu pullen und hab noch ned gemerged^^
             if (route.isEmpty()) {
                 //aktuelle Position gleich Destination, Zug angekommen, ArriveEvent
             }
@@ -96,13 +109,23 @@ public class Zug implements Runnable{
 
     }
 
-
+    /**
+     * Versucht die gegebene Route in der allgemeinen totalen Ordnung zu reservieren.
+     * Falls beim Reservieren ein Streckenteil nach der totalen Ordnung schon reserviert ist, dann gib die bereits reservierten
+     * Teile wieder frei.
+     * @param route
+     * @return true wenn die route ganz reserviert wurden konnte, false wenn mittendrin zurückgenommen wurde
+     */
     private boolean tryReserveRoute(List<Connection> route){
         //do magic stuff to try to reserve a route
         //false if it fails
-        return false;
+        return true;
     }
 
+    /**
+     * Wenn die Route reserviert wurde, dann werden hier die gleise und bahnhöfe nacheinander freigegeben und die gleise "gefahren".
+     * @param route
+     */
     private void drive(List<Connection> route){
         //do magic stuff to drive from a to b;
     }
