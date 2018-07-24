@@ -10,25 +10,25 @@ import java.util.concurrent.locks.Lock;
 
 public class FahrtdienstLeitung {
 
-    List<OwnMonitor> locations;
-    List<Connection> connections;
-    int num_trains, arrived_trains;
-    Map map;
-    List<GleisMonitor> gleise;
-    Recorder rec;
+    private List<OwnMonitor> locations;
+    private List<Connection> connections;
+    private int num_trains, arrived_trains;
+    private Map map;
+    private List<GleisMonitor> gleise;
+   private  Recorder rec;
 
     public FahrtdienstLeitung(List<OwnMonitor> loc, Map m, List<GleisMonitor> gle, int num_trains, Recorder recorder){
         this.locations = loc;
         this.map = m;
         this.gleise = gle;
-        this.connections =m.connections();
+        this.connections = m.connections();
         this.num_trains = num_trains;
         arrived_trains = 0;
         rec = recorder;
     }
 
 
-    public boolean LockGleis(int gleisid,int train_id){
+    public boolean lockGleis(int gleisid,int train_id){
         return gleise.get(gleisid).reserve(train_id);
     }
 
@@ -45,21 +45,13 @@ public class FahrtdienstLeitung {
     }
 
     synchronized boolean checkDone(){
-        if(arrived_trains == num_trains){
-            return true;
-        }
-        return  false;
+        return arrived_trains == num_trains;
     }
 
     synchronized void isArrived(){
             arrived_trains++;
     }
-
-    public void reserviereGleis(int gleisId, int zugId) {
-        //angenommen die Gleise sind von 0 bis ... durchnummeriert und sind sortiert in der Liste
-        gleise.get(gleisId).reserve(zugId);
-    }
-
+    
     public List<Connection> avoid(List<Connection> route){
         int i = 0;
         List<Connection> avoidList = new ArrayList<>();
