@@ -13,15 +13,17 @@ public class FahrtdienstLeitung {
     private List<Connection> connections;
     private int num_trains, arrived_trains;
     private List<GleisMonitor> gleise;
-   private  Recorder rec;
+    private  Recorder rec;
+    private Map map;
 
-    public FahrtdienstLeitung(List<OwnMonitor> loc, List<GleisMonitor> gle, int num_trains, Recorder recorder){
+    public FahrtdienstLeitung(List<OwnMonitor> loc, Map m, List<GleisMonitor> gle, int num_trains, Recorder recorder){
         this.locations = loc;
         this.gleise = gle;
         this.connections = m.connections();
         this.num_trains = num_trains;
         arrived_trains = 0;
         rec = recorder;
+        this.map = m;
     }
 
 
