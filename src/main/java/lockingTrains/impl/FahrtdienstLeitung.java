@@ -3,9 +3,10 @@ package lockingTrains.impl;
 import lockingTrains.shared.Connection;
 import lockingTrains.shared.Map;
 import lockingTrains.validation.Recorder;
-
 import java.util.ArrayList;
 import java.util.List;
+
+
 
 public class FahrtdienstLeitung {
 
@@ -16,7 +17,7 @@ public class FahrtdienstLeitung {
     private  Recorder rec;
     private Map map;
 
-    public FahrtdienstLeitung(List<OwnMonitor> loc, Map m, List<GleisMonitor> gle, int num_trains, Recorder recorder){
+    FahrtdienstLeitung(List<OwnMonitor> loc, Map m, List<GleisMonitor> gle, int num_trains, Recorder recorder){
         this.locations = loc;
         this.gleise = gle;
         this.connections = m.connections();

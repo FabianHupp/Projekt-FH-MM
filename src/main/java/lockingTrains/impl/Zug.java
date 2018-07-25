@@ -15,12 +15,12 @@ public class Zug implements Runnable{
     private TrainSchedule schedule;
     private int id;
     private Map map;
-    FahrtdienstLeitung FdL;
-    Location destination;
-    Location act_position;
-    Recorder rec;
+    private FahrtdienstLeitung FdL;
+    private Location destination;
+    private Location act_position;
+    private Recorder rec;
 
-    public Zug (TrainSchedule sched, int i, Map m, FahrtdienstLeitung fahrtdl, Recorder recorder){
+    Zug (TrainSchedule sched, int i, Map m, FahrtdienstLeitung fahrtdl, Recorder recorder){
         this.schedule = sched;
         this.id = i;
         this.map = m;
@@ -114,24 +114,74 @@ public class Zug implements Runnable{
      * Versucht die gegebene Route in der allgemeinen totalen Ordnung zu reservieren.
      * Falls beim Reservieren ein Streckenteil nach der totalen Ordnung schon reserviert ist, dann gib die bereits reservierten
      * Teile wieder frei.
-     * @param route
+     * @param route route to be reserved
      * @return List<Connection> - leer wenn ganze route reserviert wurde, gefüllt wenn nicht der fall und mit connections
      * die avoided werden sollen
      */
     private List<Connection> tryReserveRoute(List<Connection> route){
-        //do magic stuff to try to reserve a route
+        List<Connection> copy_route = copy(route);
+        List<Connection> save_reserved = new ArrayList<>();
         List<Connection> avoid = new ArrayList<>();
+
+        while(!copy_route.isEmpty()){
+            int list_id = 0;                            //eindeutige position in der Liste
+            int smallestId = copy_route.get(0).id();    //niedrigste id der Gleise
+            for(Connection c : copy_route){
+                if(c.id() < smallestId){
+                    smallestId = c.id();
+                    list_id = copy_route.indexOf(c);
+                }
+            }
+
+            //Gleis reservieren, falls es failt dann Connection in avoid einfügen
+            boolean reserved = this.FdL.lockGleis(smallestId, this.id);
+            if(reserved){
+                save_reserved.add(copy_route.get(list_id));
+            }else{
+                avoid.add(copy_route.get(list_id));
+                reverse_reservation(save_reserved);
+                return avoid;
+            }
+            //Stellplätze reservieren
+            boolean reserved_place_first =  this.FdL.ReservePlace(copy_route.get(list_id).first().id(),this.id);
+            if(!reserved_place_first){
+                avoid.add(copy_route.get(list_id));
+                reverse_reservation(save_reserved);
+                return avoid;
+            }
+            boolean reserved_place_second =  this.FdL.ReservePlace(copy_route.get(list_id).second().id(),this.id);
+            if(!reserved_place_second){
+                avoid.add(copy_route.get(list_id));
+                reverse_reservation(save_reserved);
+                return avoid;
+            }
+
+            //wenn allerdings nichts gefailed ist, dann das element aus copy_route entfernen, und weiter mit nächstem gleis
+            copy_route.remove(list_id);
+        }
+
         return avoid;
     }
 
+    /**
+     * Macht die Reservierung eines Zuges bis zu einer bestimmten Stelle Rückgängig wenn nicht die ganze Strecke reservierbar ist
+     * @param save_reserved connections to be reversed
+     */
+    private void reverse_reservation(List<Connection> save_reserved) {
+        for(Connection c : save_reserved){
+            FdL.UnlockGleis(c.id(),this.id);
+            FdL.FreePlace(c.first().id(),this.id);
+            FdL.FreePlace(c.second().id(),this.id);r
+        }
+    }
 
 
     /**
-     * Wenn die Route reserviert wurde, dann werden hier die gleise und bahnhöfe nacheinander freigegeben und die gleise "gefahren".
-     * @param route
+     * Wenn die Route reserviert wurde, dann wird hier "gefahren" und Gleise und alle Zwischenstops freigegeben.
+     * @param route route to be driven
      */
     private void drive(List<Connection> route){
-        List<Connection> copy_route = route;
+        List<Connection> copy_route = copy(route);
         while(!copy_route.isEmpty()){
             int next_gleis = -1;            //id in liste
             int unique_gleis_id = -1;       //unique id overall
@@ -174,6 +224,14 @@ public class Zug implements Runnable{
             //gefahrenes Gleis aus der Liste entfernen
             copy_route.remove(next_gleis);
         }
+    }
+
+    private List<Connection> copy(List<Connection> route){
+        List<Connection> copy_route = new ArrayList<>();
+        for(Connection c: route){
+            copy_route.add(c);
+        }
+        return copy_route;
     }
 
 
