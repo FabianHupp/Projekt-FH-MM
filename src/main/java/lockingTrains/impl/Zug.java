@@ -68,7 +68,7 @@ public class Zug implements Runnable{
                     rec.finish(schedule);
                     return;
             }
-            System.out.println("Res" + id + " hat nicht geklappt");
+            //System.out.println("Res" + id + " hat nicht geklappt");
             //reservieren hat nicht geklappt => nochmal veruschen mit gleisen in der avoid-liste
             route = map.route(act_position,destination,avoid);
             //solange wie mit neuen avoid eine neue route existiert

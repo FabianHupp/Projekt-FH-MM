@@ -9,12 +9,14 @@ public class OwnMonitor {
     private int reserved = 0;   //gibt die aktuell belgten/reservierten Plätze an: reserved <= capacity
     private int id;
     private List<Integer> train_ids;
+    private boolean ist_Parkplatz;
 
 
-    public OwnMonitor (int cap, int id){
+    public OwnMonitor (int cap, int id, boolean station_type){
         this.capacity = cap;
         this.id = id;
         train_ids = new ArrayList<>();
+        ist_Parkplatz = station_type;
     }
 
     /**
@@ -73,4 +75,7 @@ public class OwnMonitor {
 
     synchronized int getCapacity() { return this.capacity; }
 
+    public boolean getIst_Knotenpunkt() {
+        return ist_Parkplatz;
+    }
 }

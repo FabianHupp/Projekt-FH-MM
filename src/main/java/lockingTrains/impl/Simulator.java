@@ -67,13 +67,17 @@ public class Simulator {
 
 		//erzeuge Monitor für jeden Bahnhof
 		List<Location> locations = map.locations();
-		List<OwnMonitor> monitors = new ArrayList<OwnMonitor>();
+		List<OwnMonitor> monitors = new ArrayList<>();
 
 		for(Location loc : locations){
 			if(loc.isStation()){
-				monitors.add(new OwnMonitor(-1, loc.id()));
+				monitors.add(new OwnMonitor(-1, loc.id(),true));
 			}else{
-				monitors.add(new OwnMonitor(loc.capacity(),loc.id()));
+				if(loc.capacity() == 0) {
+					monitors.add(new OwnMonitor(1, loc.id(),false));
+				}else{
+					monitors.add(new OwnMonitor((loc.capacity()+1),loc.id(), true));
+				}
 			}
 		}
 
