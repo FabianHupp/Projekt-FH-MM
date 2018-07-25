@@ -29,11 +29,31 @@ public class FahrtdienstLeitung {
 
 
     public boolean lockGleis(int gleisid,int train_id){
-        return gleise.get(gleisid).reserve(train_id);
+        int correct_gleis = -1;
+        for(GleisMonitor gm : gleise){
+            if(gm.getId() == gleisid){
+                correct_gleis = gleise.indexOf(gm);
+            }
+        }
+        boolean reserved = false;
+        if(correct_gleis != -1){
+            reserved = gleise.get(correct_gleis).reserve(train_id);
+        }
+        return reserved;
     }
 
     public boolean ReservePlace(int stopid, int train_id){
-        return locations.get(stopid).reserve();
+        int correct_monitor = -1;
+        for(OwnMonitor om : locations){
+            if(om.getId() == stopid){
+                correct_monitor = locations.indexOf(om);
+            }
+        }
+        boolean reserved = false;
+        if(correct_monitor != -1) {
+           reserved = locations.get(correct_monitor).reserve(train_id);
+        }
+        return reserved;
     }
 
     public void UnlockGleis(int gleisid, int train_id){
@@ -56,7 +76,7 @@ public class FahrtdienstLeitung {
             }
         }
         if(correct_monitor != -1) {
-            locations.get(correct_monitor).free_space();
+            locations.get(correct_monitor).free_space(train_id);
         }
     }
 

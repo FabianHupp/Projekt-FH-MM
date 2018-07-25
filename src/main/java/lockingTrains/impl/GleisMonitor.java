@@ -21,7 +21,6 @@ public class GleisMonitor {
         if(reserved && !(train_id == this.train_id)){
             return false;
         }
-        reserved = true;
         this.train_id = train_id;
         return true;
     }
