@@ -47,8 +47,19 @@ public class OwnMonitor {
      */
     synchronized void free_space(int train_id){
         if(reserved > 0){
-            reserved--;
-            train_ids.remove(train_id);
+            if(train_ids.contains(train_id)){
+                reserved--;
+                int a = -1;
+                for(Integer in : train_ids){
+                    if(in == train_id){
+                        a = train_ids.indexOf(in);
+                    }
+                }
+                if(a != -1){
+                    train_ids.remove(a);
+                }
+
+            }
         }
     }
 
