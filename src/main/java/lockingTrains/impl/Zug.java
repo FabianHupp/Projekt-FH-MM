@@ -50,13 +50,12 @@ public class Zug implements Runnable{
                     return;
                 }
                 //wenn die route nicht null und nicht leer ist, gibt es eine reservierbare route
-                boolean res = tryReserveRoute(route);
-                if(res){
+                List<Connection> avoid = tryReserveRoute(route);
+                if(avoid.isEmpty()){
                     //wenn man die route reservieren konnte dann darf man fahren
                     drive(route);
-                    //hier meldung machen dass man arrived und finished ist
+                    //hier meldung machen dass man finished ist
                     FdL.isFinished();
-                    rec.arrive(schedule,destination);
                     rec.finish(schedule);
                     return;
                 }else{
@@ -64,9 +63,10 @@ public class Zug implements Runnable{
                 }
             }
 
-
+            /*
             // ab hier deins martine
             //hatte vorher vergessen zu pullen und hab noch ned gemerged^^
+
             if (route.isEmpty()) {
                 //aktuelle Position gleich Destination, Zug angekommen, ArriveEvent
             }
@@ -74,6 +74,7 @@ public class Zug implements Runnable{
                 //keine Route zwischen akt. Position und Destination möglich(momentan)
                 //sleep??
             }
+            /*
             //Liste ist nicht leer oder null, es existiert eine mögl. Route
             //gibt es zu vermeidende Streckenteile?(avoid)
             //wenn nein, dann gehe weiter zum Reservieren
@@ -104,7 +105,7 @@ public class Zug implements Runnable{
                 route.remove(route.get(index));
             }
 
-            //bis hier alles was du gepusht hattest
+            //bis hier alles was du gepusht hattest*/
         }
 
     }
@@ -114,20 +115,65 @@ public class Zug implements Runnable{
      * Falls beim Reservieren ein Streckenteil nach der totalen Ordnung schon reserviert ist, dann gib die bereits reservierten
      * Teile wieder frei.
      * @param route
-     * @return true wenn die route ganz reserviert wurden konnte, false wenn mittendrin zurückgenommen wurde
+     * @return List<Connection> - leer wenn ganze route reserviert wurde, gefüllt wenn nicht der fall und mit connections
+     * die avoided werden sollen
      */
-    private boolean tryReserveRoute(List<Connection> route){
+    private List<Connection> tryReserveRoute(List<Connection> route){
         //do magic stuff to try to reserve a route
-        //false if it fails
-        return true;
+        List<Connection> avoid = new ArrayList<>();
+        return avoid;
     }
 
+
+    
     /**
      * Wenn die Route reserviert wurde, dann werden hier die gleise und bahnhöfe nacheinander freigegeben und die gleise "gefahren".
      * @param route
      */
     private void drive(List<Connection> route){
-        //do magic stuff to drive from a to b;
+        List<Connection> copy_route = route;
+        while(!copy_route.isEmpty()){
+            int next_gleis = -1;            //id in liste
+            int unique_gleis_id = -1;       //unique id overall
+
+            //finde das erste Gleis dass gefahren wird
+            for(Connection c: copy_route){
+                if(c.first() == act_position || c.second() == act_position){
+                    next_gleis = copy_route.indexOf(c);
+                    unique_gleis_id = c.id();
+                }
+            }
+
+
+            //find out if first or second are the act_position
+            Location destination;
+            if(copy_route.get(next_gleis).first().equals(act_position)){
+                destination = copy_route.get(next_gleis).second();
+            }else{
+                destination = copy_route.get(next_gleis).first();
+            }
+
+            //unlocke den ersten Platz und fahre los
+            FdL.FreePlace(act_position.id(),id);
+            //recorder melden dass man jetzt leaved
+            rec.leave(schedule,act_position);
+
+            //travel anmelden und losfahren
+            rec.travel(schedule,copy_route.get(next_gleis));
+            try {
+                copy_route.get(next_gleis).travel();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            //Gleis freigeben und act_position ändern
+            rec.arrive(schedule,destination);
+            FdL.UnlockGleis(unique_gleis_id,id);
+            act_position = destination;
+
+            //gefahrenes Gleis aus der Liste entfernen
+            copy_route.remove(next_gleis);
+        }
     }
 
 

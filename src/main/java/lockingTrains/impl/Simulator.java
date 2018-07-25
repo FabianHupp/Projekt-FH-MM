@@ -84,10 +84,8 @@ public class Simulator {
 		List<Connection> connections = map.connections();
 		List<GleisMonitor> gleise = new ArrayList<GleisMonitor>();
 
-		int total_id = 0;
 		for(Connection con : connections){
-			gleise.add(new GleisMonitor(total_id));
-			total_id++;
+			gleise.add(new GleisMonitor(con.id()));
 		}
 
 		//Fahrtdienstleitung initialisieren
