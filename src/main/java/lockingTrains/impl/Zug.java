@@ -68,7 +68,7 @@ public class Zug implements Runnable{
                     rec.finish(schedule);
                     return;
             }
-
+            System.out.println("Res" + id + " hat nicht geklappt");
             //reservieren hat nicht geklappt => nochmal veruschen mit gleisen in der avoid-liste
             route = map.route(act_position,destination,avoid);
             //solange wie mit neuen avoid eine neue route existiert
@@ -90,11 +90,12 @@ public class Zug implements Runnable{
             //wenn keine route mit avoids gefunden wurde
             //gehe zu Schritt 3: nächsten Bahnhof finden und warten
             avoid.clear();
-            route = map.route(act_position,destination,empty_avoid_list);
+            /*route = map.route(act_position,destination,empty_avoid_list);
             Location nex_stop = find_next_stop(route);
             //Parkplatz reservieren
             boolean reserved = false;
             while(!reserved) {
+                System.out.
                 reserved = FdL.ReservePlace(nex_stop.id(), this.id);
                 //TODO :hier auf ein Signal von FdL warten bevor neue while-wiederholung;
             }
@@ -102,7 +103,7 @@ public class Zug implements Runnable{
             //dosomemagic to reserve all tracks till there and wait
             //
             //done
-            drive(route);
+            drive(route);*/
         }
 
     }
@@ -130,15 +131,12 @@ public class Zug implements Runnable{
                     list_id = copy_route.indexOf(c);
                 }
             }
-            System.out.println("Res"+ id + " - Smallest Id is: " + smallestId);
 
             //Gleis reservieren, falls es failt dann Connection in avoid einfügen
             boolean reserved = this.FdL.lockGleis(smallestId, this.id);
             if(reserved){
                 save_reserved.add(copy_route.get(list_id));
-                System.out.println("Res" + id + " - Gleis reserved");
             }else{
-                System.out.println("Res" + id + " - Gleis not available");
                 avoid.add(copy_route.get(list_id));
                 reverse_reservation(save_reserved);
                 return avoid;
