@@ -37,34 +37,68 @@ public class Zug implements Runnable{
         rec.start(schedule);
 
         List<Connection> empty_avoid_list = new ArrayList<>();
+
         while(!act_position.equals(destination)){
             List<Connection> route = map.route(act_position, destination, empty_avoid_list);
-            //wenn eine route gefunden wurde
-            if(route != null){
-                //wenn die route leer ist, dann finished, kein arrive event weil man ja schon vorher angekommen ist;
-                // return beendet thread
-                if(route.isEmpty()){
+
+            //falls keine Route existiert obwohl leere avoid-Liste => fail
+            if(route == null){
+                return;
+            }
+
+            //wenn die route leer ist, dann finished, kein arrive event weil man ja schon vorher angekommen ist;
+            // return beendet thread
+            if(route.isEmpty()){
                     FdL.isFinished();
                     rec.finish(schedule);
                     return;
-                }
-                //wenn die route nicht null und nicht leer ist, gibt es eine reservierbare route
-                List<Connection> avoid = tryReserveRoute(route);
-                if(avoid.isEmpty()){
+            }
+            //wenn die route nicht null und nicht leer ist, gibt es eine reservierbare route
+            List<Connection> avoid = tryReserveRoute(route);
+            if(avoid.isEmpty()){
                     //wenn man die route reservieren konnte dann darf man fahren
                     drive(route);
                     //hier meldung machen dass man finished ist
                     FdL.isFinished();
                     rec.finish(schedule);
                     return;
-                }else{
-                    //weiter im Algorithmus
-                }
             }
+
+            //reservieren hat nicht geklappt => nochmal veruschen mit gleisen in der avoid-liste
+            if(!avoid.isEmpty()){
+                route = map.route(act_position,destination,avoid);
+            }
+            //falls die neue route existiert
+            if(route != null){
+                //falls sie leer ist
+                if(route.isEmpty()){
+                    FdL.isFinished();
+                    rec.finish(schedule);
+                    return;
+                }else{
+                    //falls sie nicht leer ist
+                    avoid = tryReserveRoute(route);
+                    if(avoid.isEmpty()){
+                        drive(route);
+                        FdL.isFinished();
+                        rec.finish(schedule);
+                        return;
+                    }
+                }
+
+
+            }
+            //wenn keine route mit avoids gefunden wurde und/oder die neue strecke beim reservieren wieder neue avoids geliefert hat:
+            //gehe zu Schritt 3: nächsten Bahnhof finden und warten
+            if(route == null || !avoid.isEmpty()){
+
+            }
+
 
         }
 
     }
+
 
     /**
      * Versucht die gegebene Route in der allgemeinen totalen Ordnung zu reservieren.
