@@ -9,7 +9,6 @@ import lockingTrains.validation.Recorder;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class Zug implements Runnable{
 
     private TrainSchedule schedule;
@@ -63,49 +62,6 @@ public class Zug implements Runnable{
                 }
             }
 
-            /*
-            // ab hier deins martine
-            //hatte vorher vergessen zu pullen und hab noch ned gemerged^^
-
-            if (route.isEmpty()) {
-                //aktuelle Position gleich Destination, Zug angekommen, ArriveEvent
-            }
-            if (route == null){
-                //keine Route zwischen akt. Position und Destination möglich(momentan)
-                //sleep??
-            }
-            /*
-            //Liste ist nicht leer oder null, es existiert eine mögl. Route
-            //gibt es zu vermeidende Streckenteile?(avoid)
-            //wenn nein, dann gehe weiter zum Reservieren
-            //wenn ja, füge diese an avoid an, zurück zum Schleifenkopf, neue Route berechnen
-            List<Connection> toAvoid = this.FdL.avoid(route);
-            if (!toAvoid.isEmpty()) {
-                empty_avoid_list.addAll(toAvoid);
-                continue;
-            }
-
-            //Reservieren der Connections aus der Liste nach totaler Ordnung(aufsteigend)
-            //finde das Gleis mit der kleinsten Id
-            while(!route.isEmpty()) {
-                int i = 1;
-                int smallestId = route.get(0).id();
-                int index = 0;
-                while (i < route.size()) {
-                    if (route.get(index).id() < smallestId) {
-                        smallestId = route.get(index).id();
-                        index = i;
-                    }
-                    i++;
-                }
-                //Gleis reservieren, falls schon reserviert geht in avoid List, falls nicht reservieren
-                this.FdL.lockGleis(smallestId, this.id);
-
-                //entferne reservierten Teil aus Liste
-                route.remove(route.get(index));
-            }
-
-            //bis hier alles was du gepusht hattest*/
         }
 
     }
