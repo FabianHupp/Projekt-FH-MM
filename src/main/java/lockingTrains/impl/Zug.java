@@ -83,8 +83,20 @@ public class Zug implements Runnable{
             }
             //wenn keine route mit avoids gefunden wurde
             //gehe zu Schritt 3: nächsten Bahnhof finden und warten
-
-
+            avoid.clear();
+            route = map.route(act_position,destination,empty_avoid_list);
+            Location nex_stop = find_next_stop(route);
+            //Parkplatz reservieren
+            boolean reserved = false;
+            while(!reserved) {
+                reserved = FdL.ReservePlace(nex_stop.id(), this.id);
+                //hier auf ein Signal von FdL warten bevor weiter;
+            }
+            route = map.route(act_position, nex_stop, empty_avoid_list);
+            //dosomemagic to reserve all tracks till there and wait
+            //
+            //done
+            drive(route);
         }
 
     }
@@ -214,5 +226,8 @@ public class Zug implements Runnable{
         return copy_route;
     }
 
+    private Location find_next_stop(List<Connection> route){
+        return new Location("hi", Location.Capacity.INFINITE, 1, 2);
+    }
 
 }
