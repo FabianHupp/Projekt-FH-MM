@@ -32,7 +32,6 @@ public class Zug implements Runnable{
 
     @Override
     public void run() {
-
         //trainschedule startet:
         rec.start(schedule);
 
@@ -65,34 +64,25 @@ public class Zug implements Runnable{
             }
 
             //reservieren hat nicht geklappt => nochmal veruschen mit gleisen in der avoid-liste
-            if(!avoid.isEmpty()){
-                route = map.route(act_position,destination,avoid);
-            }
-            //falls die neue route existiert
-            if(route != null){
-                //falls sie leer ist
-                if(route.isEmpty()){
+            route = map.route(act_position,destination,avoid);
+            //solange wie mit neuen avoid eine neue route existiert
+            while(route != null){
+                //falls sie nicht leer ist
+                List<Connection> new_avoid = tryReserveRoute(route);
+                if(new_avoid.isEmpty()){
+                    drive(route);
                     FdL.isFinished();
                     rec.finish(schedule);
                     return;
-                }else{
-                    //falls sie nicht leer ist
-                    avoid = tryReserveRoute(route);
-                    if(avoid.isEmpty()){
-                        drive(route);
-                        FdL.isFinished();
-                        rec.finish(schedule);
-                        return;
-                    }
                 }
+                //falls neue avoids vorhanden zu avoid adden
+                avoid.addAll(new_avoid);
 
-
+                //neue route berechnen für nächste while-schleifen wiederholung
+                route = map.route(act_position,destination,avoid);
             }
-            //wenn keine route mit avoids gefunden wurde und/oder die neue strecke beim reservieren wieder neue avoids geliefert hat:
+            //wenn keine route mit avoids gefunden wurde
             //gehe zu Schritt 3: nächsten Bahnhof finden und warten
-            if(route == null || !avoid.isEmpty()){
-
-            }
 
 
         }
