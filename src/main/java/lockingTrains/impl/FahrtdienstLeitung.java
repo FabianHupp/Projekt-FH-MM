@@ -36,11 +36,27 @@ public class FahrtdienstLeitung {
     }
 
     public void UnlockGleis(int gleisid, int train_id){
-        gleise.get(gleisid).free_track(train_id);
+        int correct_gleis = -1;
+        for(GleisMonitor gm : gleise){
+            if(gm.getId() == gleisid){
+                correct_gleis = gleise.indexOf(gm);
+            }
+        }
+        if(correct_gleis != -1){
+            gleise.get(correct_gleis).free_track(train_id);
+        }
     }
 
     public void FreePlace(int stopid, int train_id){
-        locations.get(stopid).free_space();
+        int correct_monitor = -1;
+        for(OwnMonitor om : locations){
+            if(om.getId() == stopid){
+                correct_monitor = locations.indexOf(om);
+            }
+        }
+        if(correct_monitor != -1) {
+            locations.get(correct_monitor).free_space();
+        }
     }
 
     synchronized boolean checkDone(){

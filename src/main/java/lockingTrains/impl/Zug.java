@@ -125,7 +125,7 @@ public class Zug implements Runnable{
     }
 
 
-    
+
     /**
      * Wenn die Route reserviert wurde, dann werden hier die gleise und bahnhöfe nacheinander freigegeben und die gleise "gefahren".
      * @param route
