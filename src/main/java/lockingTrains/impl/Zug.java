@@ -34,7 +34,7 @@ public class Zug implements Runnable{
     public void run() {
         //trainschedule startet:
         rec.start(schedule);
-
+        System.out.println("Startet train with id: " + id);
         List<Connection> empty_avoid_list = new ArrayList<>();
 
         while(!act_position.equals(destination)){
@@ -42,12 +42,16 @@ public class Zug implements Runnable{
 
             //falls keine Route existiert obwohl leere avoid-Liste => fail
             if(route == null){
+                System.out.println("Es existiert keine Route für: " + id);
                 return;
             }
+
+            System.out.println("Routesize for " + id + " is " + route.size());
 
             //wenn die route leer ist, dann finished, kein arrive event weil man ja schon vorher angekommen ist;
             // return beendet thread
             if(route.isEmpty()){
+                    System.out.println("Zug " + id + " ist bereits am Ziel.");
                     FdL.isFinished();
                     rec.finish(schedule);
                     return;
@@ -56,8 +60,10 @@ public class Zug implements Runnable{
             List<Connection> avoid = tryReserveRoute(route);
             if(avoid.isEmpty()){
                     //wenn man die route reservieren konnte dann darf man fahren
+                    System.out.println("Zug " + id +" kann fahren.");
                     drive(route);
                     //hier meldung machen dass man finished ist
+                    System.out.println("Zug " + id + " ist gefahren und angekommen.");
                     FdL.isFinished();
                     rec.finish(schedule);
                     return;
@@ -90,7 +96,7 @@ public class Zug implements Runnable{
             boolean reserved = false;
             while(!reserved) {
                 reserved = FdL.ReservePlace(nex_stop.id(), this.id);
-                //hier auf ein Signal von FdL warten bevor weiter;
+                //TODO :hier auf ein Signal von FdL warten bevor neue while-wiederholung;
             }
             route = map.route(act_position, nex_stop, empty_avoid_list);
             //dosomemagic to reserve all tracks till there and wait
@@ -186,7 +192,6 @@ public class Zug implements Runnable{
                 }
             }
 
-
             //find out if first or second are the act_position
             Location destination;
             if(copy_route.get(next_gleis).first().equals(act_position)){
@@ -194,6 +199,9 @@ public class Zug implements Runnable{
             }else{
                 destination = copy_route.get(next_gleis).first();
             }
+
+            System.out.println("Wähle und fahre Gleis " + unique_gleis_id + " von " + act_position + " nach " + destination);
+
 
             //unlocke den ersten Platz und fahre los
             FdL.FreePlace(act_position.id(),id);

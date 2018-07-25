@@ -114,7 +114,7 @@ public class Simulator {
 				e.printStackTrace();
 			}
 		}
-
+		System.out.println("Alle Threads terminiert");
 		//überprüft ob alle Züge angekommen sind
 		if(FdL.checkDone()){
 			recorder.done();
