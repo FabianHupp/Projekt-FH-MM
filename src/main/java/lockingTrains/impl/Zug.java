@@ -171,7 +171,7 @@ public class Zug implements Runnable{
         for(Connection c : save_reserved){
             FdL.UnlockGleis(c.id(),this.id);
             FdL.FreePlace(c.first().id(),this.id);
-            FdL.FreePlace(c.second().id(),this.id);r
+            FdL.FreePlace(c.second().id(),this.id);
         }
     }
 
