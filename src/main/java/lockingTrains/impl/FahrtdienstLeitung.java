@@ -35,6 +35,7 @@ public class FahrtdienstLeitung {
                 correct_gleis = gleise.indexOf(gm);
             }
         }
+        System.out.println("LockGleis" + correct_gleis + " id: " + train_id);
         boolean reserved = false;
         if(correct_gleis != -1){
             reserved = gleise.get(correct_gleis).reserve(train_id);

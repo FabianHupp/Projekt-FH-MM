@@ -130,12 +130,15 @@ public class Zug implements Runnable{
                     list_id = copy_route.indexOf(c);
                 }
             }
+            System.out.println("Res"+ id + " - Smallest Id is: " + smallestId);
 
             //Gleis reservieren, falls es failt dann Connection in avoid einfügen
             boolean reserved = this.FdL.lockGleis(smallestId, this.id);
             if(reserved){
                 save_reserved.add(copy_route.get(list_id));
+                System.out.println("Res" + id + " - Gleis reserved");
             }else{
+                System.out.println("Res" + id + " - Gleis not available");
                 avoid.add(copy_route.get(list_id));
                 reverse_reservation(save_reserved);
                 return avoid;
@@ -167,6 +170,7 @@ public class Zug implements Runnable{
      */
     private void reverse_reservation(List<Connection> save_reserved) {
         for(Connection c : save_reserved){
+            System.out.println("Reverse Gleis " + c.id());
             FdL.UnlockGleis(c.id(),this.id);
             FdL.FreePlace(c.first().id(),this.id);
             FdL.FreePlace(c.second().id(),this.id);
@@ -200,7 +204,7 @@ public class Zug implements Runnable{
                 destination = copy_route.get(next_gleis).first();
             }
 
-            System.out.println("Wähle und fahre Gleis " + unique_gleis_id + " von " + act_position + " nach " + destination);
+            System.out.println(id + " wählt und fährt Gleis " + unique_gleis_id + " von " + act_position + " nach " + destination);
 
 
             //unlocke den ersten Platz und fahre los
