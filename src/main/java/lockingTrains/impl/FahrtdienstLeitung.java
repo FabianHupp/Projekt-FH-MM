@@ -3,9 +3,7 @@ package lockingTrains.impl;
 import lockingTrains.shared.Connection;
 import lockingTrains.shared.Map;
 import lockingTrains.validation.Recorder;
-import java.util.ArrayList;
 import java.util.List;
-
 
 
 public class FahrtdienstLeitung {
@@ -28,14 +26,13 @@ public class FahrtdienstLeitung {
     }
 
 
-    public boolean lockGleis(int gleisid,int train_id){
+    synchronized boolean lockGleis(int gleisid,int train_id){
         int correct_gleis = -1;
         for(GleisMonitor gm : gleise){
             if(gm.getId() == gleisid){
                 correct_gleis = gleise.indexOf(gm);
             }
         }
-        System.out.println("LockGleis" + correct_gleis + " id: " + train_id);
         boolean reserved = false;
         if(correct_gleis != -1){
             reserved = gleise.get(correct_gleis).reserve(train_id);
@@ -43,7 +40,7 @@ public class FahrtdienstLeitung {
         return reserved;
     }
 
-    public boolean ReservePlace(int stopid, int train_id){
+    synchronized boolean ReservePlace(int stopid, int train_id){
         int correct_monitor = -1;
         for(OwnMonitor om : locations){
             if(om.getId() == stopid){
@@ -57,7 +54,7 @@ public class FahrtdienstLeitung {
         return reserved;
     }
 
-    public void UnlockGleis(int gleisid, int train_id){
+    synchronized void UnlockGleis(int gleisid, int train_id){
         int correct_gleis = -1;
         for(GleisMonitor gm : gleise){
             if(gm.getId() == gleisid){
@@ -67,9 +64,10 @@ public class FahrtdienstLeitung {
         if(correct_gleis != -1){
             gleise.get(correct_gleis).free_track(train_id);
         }
+        notifyAll();
     }
 
-    public void FreePlace(int stopid, int train_id){
+    synchronized void FreePlace(int stopid, int train_id){
         int correct_monitor = -1;
         for(OwnMonitor om : locations){
             if(om.getId() == stopid){
@@ -79,6 +77,7 @@ public class FahrtdienstLeitung {
         if(correct_monitor != -1) {
             locations.get(correct_monitor).free_space(train_id);
         }
+        notifyAll();
     }
 
     synchronized boolean checkDone(){
@@ -89,21 +88,12 @@ public class FahrtdienstLeitung {
             arrived_trains++;
     }
 
-    public List<Connection> avoid(List<Connection> route){
-        int i = 0;
-        List<Connection> avoidList = new ArrayList<>();
-        while (i < route.size()) {
-
-            int id = route.get(i).id();
-
-            //angenommen die Gleise sind von 0 bis ... durchnummeriert und sind sortiert in der Liste
-            if (gleise.get(id).getReserved()) {
-                avoidList.add(route.get(i));
-            }
-
-            i++;
+    synchronized void waitforFdL(){
+        try {
+            wait();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-        return avoidList;
     }
 
 }

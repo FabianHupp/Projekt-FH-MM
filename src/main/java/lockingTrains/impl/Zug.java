@@ -8,6 +8,9 @@ import lockingTrains.validation.Recorder;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class Zug implements Runnable{
 
@@ -68,7 +71,7 @@ public class Zug implements Runnable{
                     rec.finish(schedule);
                     return;
             }
-            //System.out.println("Res" + id + " hat nicht geklappt");
+
             //reservieren hat nicht geklappt => nochmal veruschen mit gleisen in der avoid-liste
             route = map.route(act_position,destination,avoid);
             //solange wie mit neuen avoid eine neue route existiert
@@ -90,26 +93,42 @@ public class Zug implements Runnable{
             //wenn keine route mit avoids gefunden wurde
             //gehe zu Schritt 3: nächsten Bahnhof finden und warten
             avoid.clear();
-            /*route = map.route(act_position,destination,empty_avoid_list);
+            route = map.route(act_position,destination,empty_avoid_list);
+
+            //findet den nächsten stop und reserviert einen platz
             Location nex_stop = find_next_stop(route);
-            //Parkplatz reservieren
-            boolean reserved = false;
-            while(!reserved) {
-                System.out.
-                reserved = FdL.ReservePlace(nex_stop.id(), this.id);
-                //TODO :hier auf ein Signal von FdL warten bevor neue while-wiederholung;
-            }
+
+            //jetzt nochmal route bis zum reservierten parkplatz bestimmen
             route = map.route(act_position, nex_stop, empty_avoid_list);
-            //dosomemagic to reserve all tracks till there and wait
-            //
-            //done
-            drive(route);*/
+
+            //streckenteile bei FdL reservieren und warten
+            boolean reserved = false;
+            while(!reserved){
+                List<Connection> unnec = tryReserveRoute(route);
+                if(unnec.isEmpty()){
+                    reserved  = true;
+                    drive(route);
+                    if(act_position == destination){
+                        FdL.isFinished();
+                        rec.finish(schedule);
+                        return;
+                    }
+                    if(!act_position.isStation()) {
+                        rec.pause(schedule, act_position);
+                    }
+                }else {
+                        FdL.waitforFdL();
+                }
+            }
+            //return to start of algorithmn
+            if(!act_position.isStation()){
+                rec.resume(schedule,act_position);
+            }
         }
 
     }
 
-
-    /**
+        /**
      * Versucht die gegebene Route in der allgemeinen totalen Ordnung zu reservieren.
      * Falls beim Reservieren ein Streckenteil nach der totalen Ordnung schon reserviert ist, dann gib die bereits reservierten
      * Teile wieder frei.
@@ -168,7 +187,6 @@ public class Zug implements Runnable{
      */
     private void reverse_reservation(List<Connection> save_reserved) {
         for(Connection c : save_reserved){
-            System.out.println("Reverse Gleis " + c.id());
             FdL.UnlockGleis(c.id(),this.id);
             FdL.FreePlace(c.first().id(),this.id);
             FdL.FreePlace(c.second().id(),this.id);
@@ -229,15 +247,50 @@ public class Zug implements Runnable{
     }
 
     private List<Connection> copy(List<Connection> route){
-        List<Connection> copy_route = new ArrayList<>();
-        for(Connection c: route){
-            copy_route.add(c);
-        }
-        return copy_route;
+        return new ArrayList<>(route);
     }
 
     private Location find_next_stop(List<Connection> route){
-        return new Location("hi", Location.Capacity.INFINITE, 1, 2);
+        List<Connection> copy_route = copy(route);
+        boolean next_stop_found = false;
+        Location last_loc = act_position;
+        Location next_loc = act_position;
+        while(!next_stop_found){
+            int list_id = 0;
+            for(Connection c : copy_route){
+                if(c.first() == last_loc || c.second() == last_loc){
+                    list_id = copy_route.indexOf(c);
+                    if(c.first() == last_loc){
+                        next_loc = c.second();
+                    }else{
+                        next_loc = c.first();
+                    }
+
+                }
+            }
+            boolean reserved = false;
+            if(next_loc.isStation()){
+                reserved =  FdL.ReservePlace(next_loc.id() ,id);
+                if(reserved){
+                    next_stop_found = true;
+                }else{
+                    last_loc = next_loc;
+                    copy_route.remove(list_id);
+                }
+            } else if(next_loc.capacity() > 0){
+              reserved =  FdL.ReservePlace(next_loc.id() ,id);
+                if(reserved){
+                    next_stop_found = true;
+                }else{
+                    last_loc = next_loc;
+                    copy_route.remove(list_id);
+                } }else{
+                last_loc = next_loc;
+                copy_route.remove(list_id);
+            }
+
+        }
+        return next_loc;
     }
 
 }

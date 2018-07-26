@@ -4,6 +4,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import lockingTrains.shared.*;
 import lockingTrains.shared.io.Parser;
@@ -89,6 +92,7 @@ public class Simulator {
 			gleise.add(new GleisMonitor(con.id()));
 		}
 
+
 		//Fahrtdienstleitung initialisieren
 		FahrtdienstLeitung FdL = new FahrtdienstLeitung(monitors, map, gleise, schedules.size(), recorder);
 
@@ -125,7 +129,6 @@ public class Simulator {
 			return true;
 		}
 
-		recorder.done();
 		return false;
 	}
 }
