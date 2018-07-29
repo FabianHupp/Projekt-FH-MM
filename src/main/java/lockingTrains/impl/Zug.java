@@ -246,10 +246,20 @@ public class Zug implements Runnable{
         }
     }
 
+    /**
+     * Copy-funktin für eine Liste
+     * @param route original-route zum Kopieren
+     * @return  Neue listem it kopiertem inhalt
+     */
     private List<Connection> copy(List<Connection> route){
         return new ArrayList<>(route);
     }
 
+    /**
+     * Findet die nächste Parkmöglichkeit auf dem Weg
+     * @param route
+     * @return  nächster freier Platz
+     */
     private Location find_next_stop(List<Connection> route){
         List<Connection> copy_route = copy(route);
         boolean next_stop_found = false;

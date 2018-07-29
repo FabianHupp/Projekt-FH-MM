@@ -1,6 +1,5 @@
 package lockingTrains.impl;
 
-import lockingTrains.shared.Connection;
 import lockingTrains.shared.Map;
 import lockingTrains.validation.Recorder;
 import java.util.List;
@@ -9,7 +8,6 @@ import java.util.List;
 public class FahrtdienstLeitung {
 
     private List<OwnMonitor> locations;
-    private List<Connection> connections;
     private int num_trains, arrived_trains;
     private List<GleisMonitor> gleise;
     private  Recorder rec;
@@ -18,14 +16,18 @@ public class FahrtdienstLeitung {
     FahrtdienstLeitung(List<OwnMonitor> loc, Map m, List<GleisMonitor> gle, int num_trains, Recorder recorder){
         this.locations = loc;
         this.gleise = gle;
-        this.connections = m.connections();
         this.num_trains = num_trains;
         arrived_trains = 0;
         rec = recorder;
         this.map = m;
     }
 
-
+    /**
+     * Lockt ein Gleis
+     * @param gleisid       Gleisid
+     * @param train_id      Zugid
+     * @return true wenn reseviert wurde, false wenn schon belegt
+     */
     synchronized boolean lockGleis(int gleisid,int train_id){
         int correct_gleis = -1;
         for(GleisMonitor gm : gleise){
@@ -40,6 +42,12 @@ public class FahrtdienstLeitung {
         return reserved;
     }
 
+    /**
+     * reserviert einen Platz in einem Bahnhof
+     * @param stopid            Locationid
+     * @param train_id          Zugid
+     * @return true wenn es geklappt hat, false wenn nicht
+     */
     synchronized boolean ReservePlace(int stopid, int train_id){
         int correct_monitor = -1;
         for(OwnMonitor om : locations){
@@ -54,6 +62,11 @@ public class FahrtdienstLeitung {
         return reserved;
     }
 
+    /**
+     * Gibt ein Gleis frei
+     * @param gleisid
+     * @param train_id
+     */
     synchronized void UnlockGleis(int gleisid, int train_id){
         int correct_gleis = -1;
         for(GleisMonitor gm : gleise){
@@ -67,6 +80,11 @@ public class FahrtdienstLeitung {
         notifyAll();
     }
 
+    /**
+     * Gibt einen Platz frei
+     * @param stopid    id der Location
+     * @param train_id  id des Zuges
+     */
     synchronized void FreePlace(int stopid, int train_id){
         int correct_monitor = -1;
         for(OwnMonitor om : locations){
@@ -80,14 +98,25 @@ public class FahrtdienstLeitung {
         notifyAll();
     }
 
+
+    /**
+     * gibt an ob alle Trains regelgemäß terminiert sind
+     * @return ob alle trains terminiert sind
+     */
     synchronized boolean checkDone(){
         return arrived_trains == num_trains;
     }
 
+    /**
+     * kann von einem Zug aufgerufen werden um zu signalisieren dass er fertig ist
+     */
     synchronized void isFinished(){
             arrived_trains++;
     }
 
+    /**
+     * kann von einem Zug aufgerufen werden um auf die Freigabe eines Locks zu warten
+     */
     synchronized void waitforFdL(){
         try {
             wait();
