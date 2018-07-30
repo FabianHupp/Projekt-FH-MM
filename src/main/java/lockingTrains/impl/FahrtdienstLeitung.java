@@ -185,7 +185,7 @@ public class FahrtdienstLeitung {
     /**
      * kann von einem Zug aufgerufen werden um auf die Freigabe eines Locks zu warten
      */
-    public void waitforFdL(){
+    /*public void waitforFdL(){
         waitforfdl_lock.lock();
         try {
             while(!new_gleis_frei){
@@ -197,6 +197,13 @@ public class FahrtdienstLeitung {
         } finally{
             waitforfdl_lock.unlock();
         }
+    }*/
+
+    public Lock getWaitforfdl_lock() {
+        return waitforfdl_lock;
     }
 
+    public Condition getGleis_frei() {
+        return Gleis_frei;
+    }
 }

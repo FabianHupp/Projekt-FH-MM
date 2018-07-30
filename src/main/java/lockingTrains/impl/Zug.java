@@ -21,6 +21,8 @@ public class Zug implements Runnable{
     private Location destination;
     private Location act_position;
     private Recorder rec;
+    private Condition wait;
+    private Lock lock;
 
     Zug (TrainSchedule sched, int i, Map m, FahrtdienstLeitung fahrtdl, Recorder recorder){
         this.schedule = sched;
@@ -30,6 +32,8 @@ public class Zug implements Runnable{
         this.destination = sched.destination();
         this.act_position = sched.origin();
         rec = recorder;
+        wait = fahrtdl.getGleis_frei();
+        lock = fahrtdl.getWaitforfdl_lock();
     }
 
 
@@ -103,23 +107,32 @@ public class Zug implements Runnable{
 
             //streckenteile bei FdL reservieren und warten
             boolean reserved = false;
-            while(!reserved){
-                List<Connection> unnec = tryReserveRoute(route);
-                if(unnec.isEmpty()){
-                    reserved  = true;
-                    drive(route);
-                    if(act_position == destination){
-                        FdL.isFinished();
-                        rec.finish(schedule);
-                        return;
+            lock.lock();
+            try {
+                    while (!reserved) {
+                        List<Connection> unnec = tryReserveRoute(route);
+                        if (unnec.isEmpty()) {
+                            reserved = true;
+                            drive(route);
+                            if (act_position == destination) {
+                                FdL.isFinished();
+                                rec.finish(schedule);
+                                return;
+                        }
+                        if (!act_position.isStation()) {
+                            rec.pause(schedule, act_position);
+                        }
+                        } else {
+                            //FdL.waitforFdL();
+                            wait.await();
+                        }
                     }
-                    if(!act_position.isStation()) {
-                        rec.pause(schedule, act_position);
-                    }
-                }else {
-                        FdL.waitforFdL();
-                }
+                } catch (InterruptedException e) {
+                e.printStackTrace();
+            }finally {
+                lock.unlock();
             }
+
             //return to start of algorithmn
             if(!act_position.isStation()){
                 rec.resume(schedule,act_position);
