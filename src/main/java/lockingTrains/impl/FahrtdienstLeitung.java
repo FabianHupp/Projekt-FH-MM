@@ -151,7 +151,6 @@ public class FahrtdienstLeitung {
 
     }
 
-
     /**
      * gibt an ob alle Trains regelgemäß terminiert sind
      * @return ob alle trains terminiert sind
@@ -171,7 +170,7 @@ public class FahrtdienstLeitung {
     }
 
     /**
-     * kann von einem Zug aufgerufen werden um zu signalisieren dass er fertig ist
+     * von Zug aufgerufen um zu signalisieren dass er fertig ist
      */
     public void isFinished(){
         arrived_trains_lock.lock();
@@ -181,23 +180,6 @@ public class FahrtdienstLeitung {
             arrived_trains_lock.unlock();
         }
     }
-
-    /**
-     * kann von einem Zug aufgerufen werden um auf die Freigabe eines Locks zu warten
-     */
-    /*public void waitforFdL(){
-        waitforfdl_lock.lock();
-        try {
-            while(!new_gleis_frei){
-                Gleis_frei.await();
-            }
-            new_gleis_frei = false;
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally{
-            waitforfdl_lock.unlock();
-        }
-    }*/
 
     public Lock getWaitforfdl_lock() {
         return waitforfdl_lock;
