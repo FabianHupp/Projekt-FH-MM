@@ -3,6 +3,9 @@ package lockingTrains.impl;
 import lockingTrains.shared.Map;
 import lockingTrains.validation.Recorder;
 import java.util.List;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 public class FahrtdienstLeitung {
@@ -10,16 +13,21 @@ public class FahrtdienstLeitung {
     private List<OwnMonitor> locations;
     private int num_trains, arrived_trains;
     private List<GleisMonitor> gleise;
-    private  Recorder rec;
-    private Map map;
+    private Lock waitforfdl_lock, gleise_lock, location_lock, arrived_trains_lock;
+    private Condition Gleis_frei;   //CONDITION Predicate: new_gleis_frei = true
+    private boolean new_gleis_frei;
 
     FahrtdienstLeitung(List<OwnMonitor> loc, Map m, List<GleisMonitor> gle, int num_trains, Recorder recorder){
         this.locations = loc;
         this.gleise = gle;
         this.num_trains = num_trains;
         arrived_trains = 0;
-        rec = recorder;
-        this.map = m;
+        waitforfdl_lock = new ReentrantLock();
+        gleise_lock = new ReentrantLock();
+        location_lock = new ReentrantLock();
+        Gleis_frei = waitforfdl_lock.newCondition();
+        arrived_trains_lock = new ReentrantLock();
+        new_gleis_frei = false;
     }
 
     /**
@@ -28,7 +36,8 @@ public class FahrtdienstLeitung {
      * @param train_id      Zugid
      * @return true wenn reseviert wurde, false wenn schon belegt
      */
-    synchronized boolean lockGleis(int gleisid,int train_id){
+    public boolean lockGleis(int gleisid,int train_id){
+        //hier kein lock, da auf daten in den gleisen zugegriffen wird, die sich nie im verlauf desprogrammes verändern (ID)
         int correct_gleis = -1;
         for(GleisMonitor gm : gleise){
             if(gm.getId() == gleisid){
@@ -36,8 +45,15 @@ public class FahrtdienstLeitung {
             }
         }
         boolean reserved = false;
+        GleisMonitor gm;
+        gleise_lock.lock();
+        try{
+            gm = gleise.get(correct_gleis);
+        }finally {
+            gleise_lock.unlock();
+        }
         if(correct_gleis != -1){
-            reserved = gleise.get(correct_gleis).reserve(train_id);
+            reserved = gm.reserve(train_id);
         }
         return reserved;
     }
@@ -46,9 +62,8 @@ public class FahrtdienstLeitung {
      * reserviert einen Platz in einem Bahnhof
      * @param stopid            Locationid
      * @param train_id          Zugid
-     * @return true wenn es geklappt hat, false wenn nicht
-     */
-    synchronized boolean ReservePlace(int stopid, int train_id){
+     * @return true wenn es geklappt hat, false wenn nicht*/
+    public boolean ReservePlace(int stopid, int train_id){
         int correct_monitor = -1;
         for(OwnMonitor om : locations){
             if(om.getId() == stopid){
@@ -56,8 +71,15 @@ public class FahrtdienstLeitung {
             }
         }
         boolean reserved = false;
+        OwnMonitor om;
+        location_lock.lock();
+        try{
+            om = locations.get(correct_monitor);
+        }finally{
+            location_lock.unlock();
+        }
         if(correct_monitor != -1) {
-           reserved = locations.get(correct_monitor).reserve(train_id);
+           reserved = om.reserve(train_id);
         }
         return reserved;
     }
@@ -67,17 +89,32 @@ public class FahrtdienstLeitung {
      * @param gleisid
      * @param train_id
      */
-    synchronized void UnlockGleis(int gleisid, int train_id){
+    public void UnlockGleis(int gleisid, int train_id){
         int correct_gleis = -1;
         for(GleisMonitor gm : gleise){
             if(gm.getId() == gleisid){
                 correct_gleis = gleise.indexOf(gm);
             }
         }
-        if(correct_gleis != -1){
-            gleise.get(correct_gleis).free_track(train_id);
+        GleisMonitor gm;
+        gleise_lock.lock();
+        try{
+            gm = gleise.get(correct_gleis);
+        }finally {
+            gleise_lock.unlock();
         }
-        notifyAll();
+        if(correct_gleis != -1){
+            gm.free_track(train_id);
+        }
+
+        waitforfdl_lock.lock();
+        try{
+            new_gleis_frei = true;
+            Gleis_frei.signal();
+        }finally{
+            waitforfdl_lock.unlock();
+        }
+
     }
 
     /**
@@ -85,17 +122,33 @@ public class FahrtdienstLeitung {
      * @param stopid    id der Location
      * @param train_id  id des Zuges
      */
-    synchronized void FreePlace(int stopid, int train_id){
+    public void FreePlace(int stopid, int train_id){
         int correct_monitor = -1;
         for(OwnMonitor om : locations){
             if(om.getId() == stopid){
                 correct_monitor = locations.indexOf(om);
             }
         }
-        if(correct_monitor != -1) {
-            locations.get(correct_monitor).free_space(train_id);
+        OwnMonitor om;
+        location_lock.lock();
+        try{
+            om = locations.get(correct_monitor);
+        }finally{
+            location_lock.unlock();
         }
-        notifyAll();
+        if(correct_monitor != -1) {
+            om.free_space(train_id);
+        }
+
+
+        waitforfdl_lock.lock();
+        try{
+            new_gleis_frei = true;
+            Gleis_frei.signalAll();
+        }finally{
+            waitforfdl_lock.unlock();
+        }
+
     }
 
 
@@ -103,25 +156,46 @@ public class FahrtdienstLeitung {
      * gibt an ob alle Trains regelgemäß terminiert sind
      * @return ob alle trains terminiert sind
      */
-    synchronized boolean checkDone(){
-        return arrived_trains == num_trains;
+    public boolean checkDone(){
+        boolean done = false;
+        arrived_trains_lock.lock();
+        try{
+            if(arrived_trains == num_trains){
+                done = true;
+            }
+        }finally{
+            arrived_trains_lock.unlock();
+        }
+        return done;
+
     }
 
     /**
      * kann von einem Zug aufgerufen werden um zu signalisieren dass er fertig ist
      */
-    synchronized void isFinished(){
+    public void isFinished(){
+        arrived_trains_lock.lock();
+        try{
             arrived_trains++;
+        }finally{
+            arrived_trains_lock.unlock();
+        }
     }
 
     /**
      * kann von einem Zug aufgerufen werden um auf die Freigabe eines Locks zu warten
      */
-    synchronized void waitforFdL(){
+    public void waitforFdL(){
+        waitforfdl_lock.lock();
         try {
-            wait();
+            while(!new_gleis_frei){
+                Gleis_frei.await();
+            }
+            new_gleis_frei = false;
         } catch (InterruptedException e) {
             e.printStackTrace();
+        } finally{
+            waitforfdl_lock.unlock();
         }
     }
 
