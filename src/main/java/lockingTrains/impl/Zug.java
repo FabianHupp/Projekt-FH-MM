@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class Zug implements Runnable {
 
@@ -20,6 +19,7 @@ public class Zug implements Runnable {
     private Recorder rec;
     private Condition wait;
     private Lock lock;
+    private boolean paused = false;
 
     Zug(TrainSchedule sched, int i, Map m, FahrtdienstLeitung fahrtdl, Recorder recorder) {
         this.schedule = sched;
@@ -33,7 +33,6 @@ public class Zug implements Runnable {
         lock = fahrtdl.getWaitforfdl_lock();
     }
 
-
     @Override
     public void run() {
         //trainschedule startet:
@@ -46,7 +45,6 @@ public class Zug implements Runnable {
 
             //falls keine Route existiert obwohl leere avoid-Liste => fail
             if (route == null) {
-                System.out.println("Es existiert keine Route für: " + id);
                 return;
             }
 
@@ -55,7 +53,6 @@ public class Zug implements Runnable {
             //wenn die route leer ist, dann finished, kein arrive event weil man ja schon vorher angekommen ist;
             //return beendet thread
             if (route.isEmpty()) {
-                System.out.println("Zug " + id + " ist bereits am Ziel.");
                 FdL.isFinished();
                 rec.finish(schedule);
                 return;
@@ -64,7 +61,6 @@ public class Zug implements Runnable {
             List<Position> avoid = tryReserveRoute(route);
             if (avoid.isEmpty()) {
                 //wenn man die route reservieren konnte dann darf man fahren
-                System.out.println("Zug " + id + " kann fahren.");
                 drive(route, destination);
                 //hier meldung machen dass man finished ist
                 System.out.println("Zug " + id + " ist gefahren und angekommen.");
@@ -92,24 +88,20 @@ public class Zug implements Runnable {
                 route = map.route(act_position, destination, avoid);
             }
 
-            System.out.println("check" + id);
             //wenn keine route mit avoids gefunden wurde
             //gehe zu Schritt 3: nächsten Bahnhof finden und warten
             avoid.clear();
             route = map.route(act_position, destination, empty_avoid_list);
-            System.out.println("check2" + id);
             //findet den nächsten stop und reserviert einen platz
             Location nex_stop = find_next_stop(route);
-            System.out.println("check3" + id);
 
             //jetzt nochmal route bis zum reservierten parkplatz bestimmen
             route = map.route(act_position, nex_stop, empty_avoid_list);
 
             //streckenteile bei FdL reservieren und warten
             boolean reserved = false;
-
-            while (!reserved) {
-                System.out.println("test" + id);
+            System.out.println("NextStop" + id + " ist " + nex_stop);
+            while(!reserved ) {
                 List<Position> unnec = tryReserveRoute(route);
                 if (unnec.isEmpty()) {
                     reserved = true;
@@ -119,9 +111,9 @@ public class Zug implements Runnable {
                         rec.finish(schedule);
                         return;
                     }
-                    if (!act_position.isStation()) {
+                    /*if (!act_position.isStation()) {
                         rec.pause(schedule, act_position);
-                    }
+                    }*/
                 } else {
                     lock.lock();
                     try {
@@ -137,9 +129,6 @@ public class Zug implements Runnable {
 
 
             //return to start of algorithmn
-            if (!act_position.isStation()) {
-                rec.resume(schedule, act_position);
-            }
         }
 
     }
@@ -220,6 +209,11 @@ public class Zug implements Runnable {
      */
     private void drive(List<Connection> route, Location goal) {
         List<Connection> copy_route = copy(route);
+        if(paused){
+            if (!act_position.isStation()) {
+                rec.resume(schedule, act_position);
+            }
+        }
         while (!copy_route.isEmpty()) {
             int next_gleis = -1;            //id in liste
             int unique_gleis_id = -1;       //unique id overall
@@ -233,14 +227,14 @@ public class Zug implements Runnable {
             }
 
             //find out if first or second are the act_position
-            Location destination;
+            Location desti;
             if (copy_route.get(next_gleis).first().equals(act_position)) {
-                destination = copy_route.get(next_gleis).second();
+                desti = copy_route.get(next_gleis).second();
             } else {
-                destination = copy_route.get(next_gleis).first();
+                desti = copy_route.get(next_gleis).first();
             }
 
-            System.out.println(id + " wählt und fährt Gleis " + unique_gleis_id + " von " + act_position + " nach " + destination);
+            System.out.println(id + " wählt und fährt Gleis " + unique_gleis_id + " von " + act_position + " nach " + desti);
 
             //unlocke den ersten ParkPlatz (man hat immernoch die Einfahrt reserviert)
             FdL.FreePlace(act_position.id(), id);
@@ -258,9 +252,13 @@ public class Zug implements Runnable {
             }
 
             //Gleis freigeben und act_position ändern
-            rec.arrive(schedule, destination);
+            rec.arrive(schedule, desti);
+            if(desti == goal && !desti.isStation()){
+                rec.pause(schedule,desti);
+                paused = true;
+            }
             FdL.UnlockGleis(unique_gleis_id, id);
-            act_position = destination;
+            act_position = desti;
 
             //gefahrenes Gleis aus der Liste entfernen
             copy_route.remove(next_gleis);
@@ -304,12 +302,12 @@ public class Zug implements Runnable {
 
                 }
             }
+
             boolean reserved = false;
             if (next_loc.isStation()) {
                 if (next_loc.equals(destination)) {
                     reserved = FdL.ReservePlace(next_loc.id(), id);
                     if (reserved) {
-                        System.out.println("stopid" + next_loc.name());
                         return next_loc;
                     }
                 }
@@ -317,7 +315,6 @@ public class Zug implements Runnable {
                 if (next_loc.capacity() > 0) {
                     reserved = FdL.ReservePlace(next_loc.id(), id);
                     if (reserved) {
-                        System.out.println("stopid" + next_loc.name());
                         return next_loc;
                     }
                 }
