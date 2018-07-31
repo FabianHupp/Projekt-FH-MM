@@ -79,17 +79,25 @@ public class Map {
 	 * particular, this means a route from {@code A} to {@code
 	 * C} over {@code B} may be {@code [(A,B), (C,B)]} rather than
 	 * {@code [(A,B), (B,C)]}. See {@link Connection} for details.
+	 * <p>
+	 * <b>Important note:</b> For this method to work properly, {@code avoid} may
+	 * only contain references that are stored in this {@link Map}.
 	 *
 	 * @param origin      starting point of the route.
 	 * @param destination end point of the route.
-	 * @param avoid       list of {@link Connection}s to avoid.
+	 * @param avoid       list of {@link Position}s to avoid.
 	 *
 	 * @return {@code null} if there is no route and a valid route otherwise.
 	 *
 	 * @see Connection
 	 */
-	public List<Connection> route(final Location origin, final Location destination,
-			final Collection<Connection> avoid) {
+	public List<Connection> route(final Location origin, final Location destination, final Collection<Position> avoid) {
+		if (avoid.contains(origin) || avoid.contains(destination))
+			return null;
+
+		final var locations = new ArrayList<>(this.locations);
+		locations.removeIf(avoid::contains);
+
 		final var queue = new PriorityQueue<RoutableLocation>();
 		locations.forEach(l -> queue.offer(new RoutableLocation(l, -1)));
 

@@ -39,5 +39,13 @@ repositories {
 
 task srcZip(type: Zip, group: 'Distribution', description: 'Archives sources in a zip file.') {
     from 'src'
+    setArchiveName 'sources.zip'
+}
+
+task submissionZip(type: Zip, group: 'Distribution', description: 'Archives sources and the documentation PDF in a zip file.') {
+    from '.'
+    include 'src/**'
+    include '*.pdf'
+    caseSensitive false
     setArchiveName 'submission.zip'
 }

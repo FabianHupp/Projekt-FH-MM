@@ -8,6 +8,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Objects;
@@ -24,11 +25,11 @@ public class ParserTest {
 	private static Map saarbahn;
 
 	@BeforeClass
-	public static void setUpClass() throws IOException {
+	public static void setUpClass() throws IOException, URISyntaxException {
 		final var loader = ClassLoader.getSystemClassLoader();
 		final var mapResource = Objects.requireNonNull(loader.getResource("saarbahn.map"));
-		final var path = mapResource.getFile();
-		final var reader = new BufferedReader(new FileReader(new File(path)));
+		final var file = new File(mapResource.toURI());
+		final var reader = new BufferedReader(new FileReader(file));
 		saarbahn = Parser.parseMap(reader);
 	}
 
@@ -298,11 +299,11 @@ public class ParserTest {
 	}
 
 	@Test
-	public void readProblemFileSaarbahnEmpty() throws IOException {
+	public void readProblemFileSaarbahnEmpty() throws IOException, URISyntaxException {
 		final var loader = ClassLoader.getSystemClassLoader();
 		final var problemResource = Objects.requireNonNull(loader.getResource("saarbahn_empty.problem"));
-		final var path = problemResource.getFile();
-		final var reader = new BufferedReader(new FileReader(path));
+		final var file = new File(problemResource.toURI());
+		final var reader = new BufferedReader(new FileReader(file));
 		final var problem = Parser.parseProblem(reader, saarbahn);
 
 		final var map = problem.map();
@@ -313,11 +314,11 @@ public class ParserTest {
 	}
 
 	@Test
-	public void readProblemFileSaarbahnSingle() throws IOException {
+	public void readProblemFileSaarbahnSingle() throws IOException, URISyntaxException {
 		final var loader = ClassLoader.getSystemClassLoader();
 		final var problemResource = Objects.requireNonNull(loader.getResource("saarbahn_single.problem"));
-		final var path = problemResource.getFile();
-		final var reader = new BufferedReader(new FileReader(path));
+		final var file = new File(problemResource.toURI());
+		final var reader = new BufferedReader(new FileReader(file));
 		final var problem = Parser.parseProblem(reader, saarbahn);
 
 		final var map = problem.map();
@@ -333,11 +334,11 @@ public class ParserTest {
 	}
 
 	@Test
-	public void readProblemFileSaarbahnOpposing() throws IOException {
+	public void readProblemFileSaarbahnOpposing() throws IOException, URISyntaxException {
 		final var loader = ClassLoader.getSystemClassLoader();
 		final var problemResource = Objects.requireNonNull(loader.getResource("saarbahn_opposing.problem"));
-		final var path = problemResource.getFile();
-		final var reader = new BufferedReader(new FileReader(path));
+		final var file = new File(problemResource.toURI());
+		final var reader = new BufferedReader(new FileReader(file));
 		final var problem = Parser.parseProblem(reader, saarbahn);
 
 		final var map = problem.map();
@@ -355,12 +356,12 @@ public class ParserTest {
 	}
 
 	@Test
-	public void completeSaarbahnEmpty() throws IOException {
+	public void completeSaarbahnEmpty() throws IOException, URISyntaxException {
 		final var loader = ClassLoader.getSystemClassLoader();
 		final var mapResource = Objects.requireNonNull(loader.getResource("saarbahn.map"));
 		final var problemResource = Objects.requireNonNull(loader.getResource("saarbahn_empty.problem"));
-		final var mapFile = mapResource.getFile();
-		final var problemFile = problemResource.getFile();
+		final var mapFile = mapResource.toURI();
+		final var problemFile = problemResource.toURI();
 
 		final var problem = Parser.parse(new File(mapFile), new File(problemFile));
 
@@ -369,12 +370,12 @@ public class ParserTest {
 	}
 
 	@Test
-	public void completeSaarbahnSingle() throws IOException {
+	public void completeSaarbahnSingle() throws IOException, URISyntaxException {
 		final var loader = ClassLoader.getSystemClassLoader();
 		final var mapResource = Objects.requireNonNull(loader.getResource("saarbahn.map"));
 		final var problemResource = Objects.requireNonNull(loader.getResource("saarbahn_single.problem"));
-		final var mapFile = mapResource.getFile();
-		final var problemFile = problemResource.getFile();
+		final var mapFile = mapResource.toURI();
+		final var problemFile = problemResource.toURI();
 
 		final var problem = Parser.parse(new File(mapFile), new File(problemFile));
 
@@ -383,12 +384,12 @@ public class ParserTest {
 	}
 
 	@Test
-	public void completeSaarbahnOpposing() throws IOException {
+	public void completeSaarbahnOpposing() throws IOException, URISyntaxException {
 		final var loader = ClassLoader.getSystemClassLoader();
 		final var mapResource = Objects.requireNonNull(loader.getResource("saarbahn.map"));
 		final var problemResource = Objects.requireNonNull(loader.getResource("saarbahn_opposing.problem"));
-		final var mapFile = mapResource.getFile();
-		final var problemFile = problemResource.getFile();
+		final var mapFile = mapResource.toURI();
+		final var problemFile = problemResource.toURI();
 
 		final var problem = Parser.parse(new File(mapFile), new File(problemFile));
 

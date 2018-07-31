@@ -33,6 +33,7 @@ public class Validator extends Recorder {
 	private final Map<Integer, Integer> position;
 	private final Map<Integer, Integer> leaving;
 	private final Map<Integer, Integer> arriving;
+	private final Map<Integer, Integer> pausing;
 	private final Map<Integer, Long> eta;
 
 	/**
@@ -49,6 +50,7 @@ public class Validator extends Recorder {
 		this.position = new HashMap<>();
 		this.leaving = new HashMap<>();
 		this.arriving = new HashMap<>();
+		this.pausing = new HashMap<>();
 		this.eta = new HashMap<>();
 
 		this.capacities = new HashMap<>();
@@ -120,7 +122,9 @@ public class Validator extends Recorder {
 		leaving.remove(schedule.id());
 
 		final boolean forwardDirection = leave == section.first().id();
-		arriving.put(schedule.id(), (forwardDirection ? section.second() : section.first()).id());
+		final int nextLocationID = (forwardDirection ? section.second() : section.first()).id();
+		assertTrue(!arriving.containsValue(nextLocationID));
+		arriving.put(schedule.id(), nextLocationID);
 		travelling.put(schedule.id(), section.id());
 
 		eta.put(schedule.id(), timestamp + section.time());
@@ -137,7 +141,7 @@ public class Validator extends Recorder {
 		assertTrue(arriving.get(schedule.id()) != null);
 		assertTrue(arriving.get(schedule.id()) == location.id());
 		assertTrue(travelling.get(schedule.id()) != null);
-		assertTrue(location.isStation() || location.capacity() > 0 || !position.containsValue(location.id()));
+		assertTrue(location.isStation() || !position.containsValue(location.id()));
 		assertTrue(eta.get(schedule.id()) != null);
 		assertTrue(eta.get(schedule.id()) <= timestamp);
 
@@ -160,6 +164,8 @@ public class Validator extends Recorder {
 
 		assertTrue(!location.isStation());
 
+		position.remove(schedule.id());
+		pausing.put(schedule.id(), location.id());
 		final int capacity = capacities.get(location.id());
 		assertTrue(capacity > 0);
 		capacities.put(location.id(), capacity - 1);
@@ -173,11 +179,13 @@ public class Validator extends Recorder {
 	@Override
 	void resume(final long timestamp, final TrainSchedule schedule, final Location location) {
 		assertTrue(started.contains(schedule.id()));
-		assertTrue(position.get(schedule.id()) != null);
-		assertTrue(position.get(schedule.id()) == location.id());
+		assertTrue(pausing.get(schedule.id()) != null);
+		assertTrue(pausing.get(schedule.id()) == location.id());
 
 		assertTrue(!location.isStation());
 
+		pausing.remove(schedule.id());
+		position.put(schedule.id(), location.id());
 		final int capacity = capacities.get(location.id());
 		assertTrue(capacity < location.capacity());
 		capacities.put(location.id(), capacity + 1);
