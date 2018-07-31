@@ -5,8 +5,10 @@ import java.util.List;
 
 public class OwnMonitor {
 
-    private int capacity;   //gibt die maximale Kapazität an; -1 = unendlich viel Platz
-    private int reserved = 0;   //gibt die aktuell belgten/reservierten Plätze an: reserved <= capacity
+    private int capacity;   //gibt die maximale Kapazität an parkplätzen; -1 = unendlich viel Platz
+    private int reserved = 0;   //gibt die aktuell belgten/reservierten ParkPlätze an: reserved <= capacity
+    private boolean locked;
+    private int lockedid;
     private int id;
     private List<Integer> train_ids;
     private boolean ist_Parkplatz;
@@ -17,10 +19,43 @@ public class OwnMonitor {
         this.id = id;
         train_ids = new ArrayList<>();
         ist_Parkplatz = station_type;
+        locked = false;
+        lockedid = -1;
     }
 
     /**
-     * Versucht einen Platz im Bahnhof zu reservieren;
+     * Reserviert das Gleis für die einfahrenden/durchfahrenden Züge
+     * @param train_id
+     * @return
+     */
+    synchronized boolean reserve_arrive(int train_id){
+            if(locked){
+                if(lockedid == train_id){
+                    return true;
+                }else{
+                    return false;
+                }
+            }
+
+            if(!locked){
+                locked = true;
+                lockedid = train_id;
+                return true;
+            }
+
+            return false;
+    }
+
+    synchronized void free_arrive(int train_id){
+                if(train_id == lockedid){
+                    locked = false;
+                    train_id = -1;
+                }
+    }
+
+
+    /**
+     * Versucht einen ParkPlatz im Bahnhof/Knotenpunkt zu reservieren;
      * @return gibt ein bool zurück das angibt ob das Reservieren erfolgreich war oder nicht
      */
     synchronized boolean reserve(int train_id){

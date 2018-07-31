@@ -77,9 +77,9 @@ public class Simulator {
 				monitors.add(new OwnMonitor(-1, loc.id(),true));
 			}else{
 				if(loc.capacity() == 0) {
-					monitors.add(new OwnMonitor(1, loc.id(),false));
+					monitors.add(new OwnMonitor(0, loc.id(),false));
 				}else{
-					monitors.add(new OwnMonitor((loc.capacity()+1),loc.id(), true));
+					monitors.add(new OwnMonitor((loc.capacity()),loc.id(), true));
 				}
 			}
 		}

@@ -53,7 +53,7 @@ public class Zug implements Runnable {
             System.out.println("Routesize for " + id + " is " + route.size());
 
             //wenn die route leer ist, dann finished, kein arrive event weil man ja schon vorher angekommen ist;
-            // return beendet thread
+            //return beendet thread
             if (route.isEmpty()) {
                 System.out.println("Zug " + id + " ist bereits am Ziel.");
                 FdL.isFinished();
@@ -65,7 +65,7 @@ public class Zug implements Runnable {
             if (avoid.isEmpty()) {
                 //wenn man die route reservieren konnte dann darf man fahren
                 System.out.println("Zug " + id + " kann fahren.");
-                drive(route);
+                drive(route,destination);
                 //hier meldung machen dass man finished ist
                 System.out.println("Zug " + id + " ist gefahren und angekommen.");
                 FdL.isFinished();
@@ -80,7 +80,7 @@ public class Zug implements Runnable {
                 //falls sie nicht leer ist
                 List<Position> new_avoid = tryReserveRoute(route);
                 if (new_avoid.isEmpty()) {
-                    drive(route);
+                    drive(route,destination);
                     FdL.isFinished();
                     rec.finish(schedule);
                     return;
@@ -109,7 +109,7 @@ public class Zug implements Runnable {
                 List<Position> unnec = tryReserveRoute(route);
                 if (unnec.isEmpty()) {
                     reserved = true;
-                    drive(route);
+                    drive(route,nex_stop);
                     if (act_position == destination) {
                         FdL.isFinished();
                         rec.finish(schedule);
@@ -174,14 +174,14 @@ public class Zug implements Runnable {
                 reverse_reservation(save_reserved);
                 return avoid;
             }
-            //Stellplätze reservieren
-            boolean reserved_place_first = this.FdL.ReservePlace(copy_route.get(list_id).first().id(), this.id);
+            //locations reservieren
+            boolean reserved_place_first = this.FdL.reserve_Einfahrt(copy_route.get(list_id).first().id(), this.id);
             if (!reserved_place_first) {
                 avoid.add(copy_route.get(list_id).first());
                 reverse_reservation(save_reserved);
                 return avoid;
             }
-            boolean reserved_place_second = this.FdL.ReservePlace(copy_route.get(list_id).second().id(), this.id);
+            boolean reserved_place_second = this.FdL.reserve_Einfahrt(copy_route.get(list_id).second().id(), this.id);
             if (!reserved_place_second) {
                 avoid.add(copy_route.get(list_id).second());
                 reverse_reservation(save_reserved);
@@ -214,7 +214,7 @@ public class Zug implements Runnable {
      *
      * @param route route to be driven
      */
-    private void drive(List<Connection> route) {
+    private void drive(List<Connection> route, Location goal) {
         List<Connection> copy_route = copy(route);
         while (!copy_route.isEmpty()) {
             int next_gleis = -1;            //id in liste
@@ -238,14 +238,15 @@ public class Zug implements Runnable {
 
             System.out.println(id + " wählt und fährt Gleis " + unique_gleis_id + " von " + act_position + " nach " + destination);
 
-
-            //unlocke den ersten Platz und fahre los
+            //unlocke den ersten ParkPlatz (man hat immernoch die Einfahrt reserviert)
             FdL.FreePlace(act_position.id(), id);
-            //recorder melden dass man jetzt leaved
+
+            //recorder melden dass man jetzt leaved und Einfahrt frei machen
             rec.leave(schedule, act_position);
 
             //travel anmelden und losfahren
             rec.travel(schedule, copy_route.get(next_gleis));
+            FdL.free_Einfahrt(act_position.id(),id);
             try {
                 copy_route.get(next_gleis).travel();
             } catch (InterruptedException e) {
@@ -259,6 +260,10 @@ public class Zug implements Runnable {
 
             //gefahrenes Gleis aus der Liste entfernen
             copy_route.remove(next_gleis);
+        }
+
+        if(act_position == goal){
+            FdL.free_Einfahrt(goal.id(),id);
         }
     }
 

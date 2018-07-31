@@ -57,33 +57,6 @@ public class FahrtdienstLeitung {
         }
         return reserved;
     }
-
-    /**
-     * reserviert einen Platz in einem Bahnhof
-     * @param stopid            Locationid
-     * @param train_id          Zugid
-     * @return true wenn es geklappt hat, false wenn nicht*/
-    public boolean ReservePlace(int stopid, int train_id){
-        int correct_monitor = -1;
-        for(OwnMonitor om : locations){
-            if(om.getId() == stopid){
-                correct_monitor = locations.indexOf(om);
-            }
-        }
-        boolean reserved = false;
-        OwnMonitor om;
-        location_lock.lock();
-        try{
-            om = locations.get(correct_monitor);
-        }finally{
-            location_lock.unlock();
-        }
-        if(correct_monitor != -1) {
-           reserved = om.reserve(train_id);
-        }
-        return reserved;
-    }
-
     /**
      * Gibt ein Gleis frei
      * @param gleisid
@@ -118,7 +91,33 @@ public class FahrtdienstLeitung {
     }
 
     /**
-     * Gibt einen Platz frei
+     * reserviert einen ParkPlatz in einem Bahnhof
+     * @param stopid            Locationid
+     * @param train_id          Zugid
+     * @return true wenn es geklappt hat, false wenn nicht*/
+    public boolean ReservePlace(int stopid, int train_id){
+        int correct_monitor = -1;
+        for(OwnMonitor om : locations){
+            if(om.getId() == stopid){
+                correct_monitor = locations.indexOf(om);
+            }
+        }
+        boolean reserved = false;
+        OwnMonitor om;
+        location_lock.lock();
+        try{
+            om = locations.get(correct_monitor);
+        }finally{
+            location_lock.unlock();
+        }
+        if(correct_monitor != -1) {
+            reserved = om.reserve(train_id);
+        }
+        return reserved;
+    }
+
+    /**
+     * Gibt einen ParkPlatz frei
      * @param stopid    id der Location
      * @param train_id  id des Zuges
      */
@@ -148,7 +147,54 @@ public class FahrtdienstLeitung {
         }finally{
             waitforfdl_lock.unlock();
         }
+    }
 
+    public boolean reserve_Einfahrt(int stopid, int train_id){
+        int correct_monitor = -1;
+        for(OwnMonitor om : locations){
+            if(om.getId() == stopid){
+                correct_monitor = locations.indexOf(om);
+            }
+        }
+        boolean reserved = false;
+        OwnMonitor om;
+        location_lock.lock();
+        try{
+            om = locations.get(correct_monitor);
+        }finally{
+            location_lock.unlock();
+        }
+        if(correct_monitor != -1) {
+            reserved = om.reserve_arrive(train_id);
+        }
+        return reserved;
+    }
+
+    public void free_Einfahrt(int stopid, int train_id){
+        int correct_monitor = -1;
+        for(OwnMonitor om : locations){
+            if(om.getId() == stopid){
+                correct_monitor = locations.indexOf(om);
+            }
+        }
+        OwnMonitor om;
+        location_lock.lock();
+        try{
+            om = locations.get(correct_monitor);
+        }finally{
+            location_lock.unlock();
+        }
+        if(correct_monitor != -1) {
+            om.free_arrive(train_id);
+        }
+
+        waitforfdl_lock.lock();
+        try{
+            new_gleis_frei = true;
+            Gleis_frei.signalAll();
+        }finally{
+            waitforfdl_lock.unlock();
+        }
     }
 
     /**
