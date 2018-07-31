@@ -1,9 +1,6 @@
 package lockingTrains.impl;
 
-import lockingTrains.shared.Connection;
-import lockingTrains.shared.Location;
-import lockingTrains.shared.Map;
-import lockingTrains.shared.TrainSchedule;
+import lockingTrains.shared.*;
 import lockingTrains.validation.Recorder;
 
 import java.util.ArrayList;
@@ -42,7 +39,7 @@ public class Zug implements Runnable {
         //trainschedule startet:
         rec.start(schedule);
         System.out.println("Startet train with id: " + id);
-        List<Connection> empty_avoid_list = new ArrayList<>();
+        List<Position> empty_avoid_list = new ArrayList<>();
 
         while (!act_position.equals(destination)) {
             List<Connection> route = map.route(act_position, destination, empty_avoid_list);
@@ -64,7 +61,7 @@ public class Zug implements Runnable {
                 return;
             }
             //wenn die route nicht null und nicht leer ist, gibt es eine reservierbare route
-            List<Connection> avoid = tryReserveRoute(route);
+            List<Position> avoid = tryReserveRoute(route);
             if (avoid.isEmpty()) {
                 //wenn man die route reservieren konnte dann darf man fahren
                 System.out.println("Zug " + id + " kann fahren.");
@@ -81,7 +78,7 @@ public class Zug implements Runnable {
             //solange wie mit neuen avoid eine neue route existiert
             while (route != null) {
                 //falls sie nicht leer ist
-                List<Connection> new_avoid = tryReserveRoute(route);
+                List<Position> new_avoid = tryReserveRoute(route);
                 if (new_avoid.isEmpty()) {
                     drive(route);
                     FdL.isFinished();
@@ -109,7 +106,7 @@ public class Zug implements Runnable {
             boolean reserved = false;
 
             while (!reserved) {
-                List<Connection> unnec = tryReserveRoute(route);
+                List<Position> unnec = tryReserveRoute(route);
                 if (unnec.isEmpty()) {
                     reserved = true;
                     drive(route);
@@ -152,10 +149,10 @@ public class Zug implements Runnable {
      * @return List<Connection> - leer wenn ganze route reserviert wurde, gefüllt wenn nicht der fall und mit connections
      * die avoided werden sollen
      */
-    private List<Connection> tryReserveRoute(List<Connection> route) {
+    private List<Position> tryReserveRoute(List<Connection> route) {
         List<Connection> copy_route = copy(route);
         List<Connection> save_reserved = new ArrayList<>();
-        List<Connection> avoid = new ArrayList<>();
+        List<Position> avoid = new ArrayList<>();
 
         while (!copy_route.isEmpty()) {
             int list_id = 0;                            //eindeutige position in der Liste
@@ -172,20 +169,21 @@ public class Zug implements Runnable {
             if (reserved) {
                 save_reserved.add(copy_route.get(list_id));
             } else {
-                avoid.add(copy_route.get(list_id));
+                avoid.add(copy_route.get(list_id).first());
+                avoid.add(copy_route.get(list_id).second());
                 reverse_reservation(save_reserved);
                 return avoid;
             }
             //Stellplätze reservieren
             boolean reserved_place_first = this.FdL.ReservePlace(copy_route.get(list_id).first().id(), this.id);
             if (!reserved_place_first) {
-                avoid.add(copy_route.get(list_id));
+                avoid.add(copy_route.get(list_id).first());
                 reverse_reservation(save_reserved);
                 return avoid;
             }
             boolean reserved_place_second = this.FdL.ReservePlace(copy_route.get(list_id).second().id(), this.id);
             if (!reserved_place_second) {
-                avoid.add(copy_route.get(list_id));
+                avoid.add(copy_route.get(list_id).second());
                 reverse_reservation(save_reserved);
                 return avoid;
             }
