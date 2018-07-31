@@ -83,7 +83,7 @@ public class FahrtdienstLeitung {
         waitforfdl_lock.lock();
         try{
             new_gleis_frei = true;
-            Gleis_frei.signal();
+            Gleis_frei.signalAll();
         }finally{
             waitforfdl_lock.unlock();
         }
