@@ -10,70 +10,56 @@ import java.util.concurrent.locks.Lock;
 
 public class Zug implements Runnable {
 
-    private TrainSchedule schedule;
-    private int id;
-    private Map map;
-    private FahrtdienstLeitung FdL;
-    private Location destination;
-    private Location act_position;
-    private Recorder rec;
-    private Condition wait;
-    private Lock lock;
+    private Location destination, act_position;
     private boolean paused = false;
+    private TrainSchedule schedule;
+    private FahrtdienstLeitung FdL;
+    private Recorder rec;
+    private Map map;
+    private int id;
 
     Zug(TrainSchedule sched, int i, Map m, FahrtdienstLeitung fahrtdl, Recorder recorder) {
-        this.schedule = sched;
-        this.id = i;
-        this.map = m;
-        this.FdL = fahrtdl;
-        this.destination = sched.destination();
-        this.act_position = sched.origin();
+        destination = sched.destination();
+        act_position = sched.origin();
+        schedule = sched;
         rec = recorder;
-        wait = fahrtdl.getGleis_frei();
-        lock = fahrtdl.getWaitforfdl_lock();
+        FdL = fahrtdl;
+        map = m;
+        id = i;
     }
 
     @Override
     public void run() {
-        //trainschedule startet:
         rec.start(schedule);
-        System.out.println("Startet train with id: " + id);
         List<Position> empty_avoid_list = new ArrayList<>();
 
         while (!act_position.equals(destination)) {
             List<Connection> route = map.route(act_position, destination, empty_avoid_list);
 
-            //falls keine Route existiert obwohl leere avoid-Liste => fail
-            if (route == null) {
-                return;
-            }
-
-            System.out.println("Routesize for " + id + " is " + route.size());
-
-            //wenn die route leer ist, dann finished, kein arrive event weil man ja schon vorher angekommen ist;
-            //return beendet thread
+            //Falls keine Route existiert obwohl leere avoid-Liste => fail
+            if (route == null) {return; }
+            //Wenn schon an Ziel
             if (route.isEmpty()) {
                 FdL.isFinished();
                 rec.finish(schedule);
                 return;
             }
-            //wenn die route nicht null und nicht leer ist, gibt es eine reservierbare route
+            //Es gibt eine reservierbare route
             List<Position> avoid = tryReserveRoute(route);
             if (avoid.isEmpty()) {
-                //wenn man die route reservieren konnte dann darf man fahren
                 drive(route, destination);
-                //hier meldung machen dass man finished ist
                 System.out.println("Zug " + id + " ist gefahren und angekommen.");
                 FdL.isFinished();
                 rec.finish(schedule);
                 return;
             }
 
-            //reservieren hat nicht geklappt => nochmal veruschen mit gleisen in der avoid-liste
+
+
+            //Schritt 2: Reservieren hat nicht geklappt => nochmal mit avoid-liste
             route = map.route(act_position, destination, avoid);
-            //solange wie mit neuen avoid eine neue route existiert
+            //Solange eine route gefunden wird:
             while (route != null) {
-                //falls sie nicht leer ist
                 List<Position> new_avoid = tryReserveRoute(route);
                 if (new_avoid.isEmpty()) {
                     drive(route, destination);
@@ -81,70 +67,62 @@ public class Zug implements Runnable {
                     rec.finish(schedule);
                     return;
                 }
-                //falls neue avoids vorhanden zu avoid adden
+                //Neue avoids adden
                 avoid.addAll(new_avoid);
 
-                //neue route berechnen für nächste while-schleifen wiederholung
+                //Neue route für nächste schleifen-wiederholung
                 route = map.route(act_position, destination, avoid);
             }
 
-            //wenn keine route mit avoids gefunden wurde
-            //gehe zu Schritt 3: nächsten Bahnhof finden und warten
-            avoid.clear();
-            route = map.route(act_position, destination, empty_avoid_list);
-            //findet den nächsten stop und reserviert einen platz
-            Location nex_stop = find_next_stop(route);
 
-            //jetzt nochmal route bis zum reservierten parkplatz bestimmen
+
+            //Schritt 3: nächsten Stellplatz finden und warten
+            route = map.route(act_position, destination, empty_avoid_list);
+            //Findet den nächsten stop und reserviert einen Platz
+            Location nex_stop = find_next_stop(route);
+            //Route bis zum reservierten parkplatz bestimmen
             route = map.route(act_position, nex_stop, empty_avoid_list);
 
-            //streckenteile bei FdL reservieren und warten
-            boolean reserved = false;
-            System.out.println("NextStop" + id + " ist " + nex_stop);
-            while(!reserved ) {
-                List<Position> unnec = tryReserveRoute(route);
-                if (unnec.isEmpty()) {
-                    reserved = true;
-                    drive(route, nex_stop);
-                    if (act_position == destination) {
-                        FdL.isFinished();
-                        rec.finish(schedule);
-                        return;
-                    }
-                    /*if (!act_position.isStation()) {
-                        rec.pause(schedule, act_position);
-                    }*/
-                } else {
-                    lock.lock();
-                    try {
-                        wait.await();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } finally {
-                        lock.unlock();
-                    }
 
+            //Streckenteile bei FdL reservieren und blockierend warten wenn nicht frei
+            List<Connection> copy_route = copy(route);
+            while(!copy_route.isEmpty()){
+                int list_id = 0;
+                int smallestId = copy_route.get(0).id();
+                for (Connection c : copy_route) {
+                    if (c.id() < smallestId) {
+                        smallestId = c.id();
+                        list_id = copy_route.indexOf(c);
+                    }
                 }
+
+                FdL.lockGleisBlocking(smallestId,this.id);
+                FdL.reserveEinfahrtBlocking(copy_route.get(list_id).first().id(), this.id);
+                FdL.reserveEinfahrtBlocking(copy_route.get(list_id).second().id(), this.id);
+                copy_route.remove(list_id);
             }
-
-
-            //return to start of algorithmn
+            //Route reserviert
+            drive(route,nex_stop);
+            if(nex_stop == destination){
+                FdL.isFinished();
+                rec.finish(schedule);
+                return;
+            }
         }
 
     }
 
     /**
      * Versucht die gegebene Route in der allgemeinen totalen Ordnung zu reservieren.
-     * Falls beim Reservieren ein Streckenteil nach der totalen Ordnung schon reserviert ist, dann gib die bereits reservierten
-     * Teile wieder frei.
-     *
-     * @param route route to be reserved
-     * @return List<Connection> - leer wenn ganze route reserviert wurde, gefüllt wenn nicht der fall und mit connections
-     * die avoided werden sollen
+     * Falls beim Reservieren ein Streckenteil nach der totalen Ordnung schon reserviert ist, dann werden die bereits reservierten
+     * Teile wieder frei gegeben.
+     * @param route Route zum Reservieren
+     * @return List<Connection> - leer wenn ganze route reserviert wurde, gefüllt mit connections
+     *         die avoided werden sollen wenn dem nicht der fall ist
      */
     private List<Position> tryReserveRoute(List<Connection> route) {
-        List<Connection> copy_route = copy(route);
         List<Connection> save_reserved = new ArrayList<>();
+        List<Connection> copy_route = copy(route);
         List<Position> avoid = new ArrayList<>();
 
         while (!copy_route.isEmpty()) {
@@ -157,8 +135,8 @@ public class Zug implements Runnable {
                 }
             }
 
-            //Gleis reservieren, falls es failt dann Connection in avoid einfügen
-            boolean reserved = this.FdL.lockGleis(smallestId, this.id);
+            //Gleis reservieren
+            boolean reserved = FdL.lockGleis(smallestId, this.id);
             if (reserved) {
                 save_reserved.add(copy_route.get(list_id));
             } else {
@@ -167,31 +145,31 @@ public class Zug implements Runnable {
                 reverse_reservation(save_reserved);
                 return avoid;
             }
-            //locations reservieren
-            boolean reserved_place_first = this.FdL.reserve_Einfahrt(copy_route.get(list_id).first().id(), this.id);
+            //Locations reservieren
+            boolean reserved_place_first = FdL.reserve_Einfahrt(copy_route.get(list_id).first().id(), this.id);
             if (!reserved_place_first) {
                 avoid.add(copy_route.get(list_id).first());
                 reverse_reservation(save_reserved);
                 return avoid;
             }
-            boolean reserved_place_second = this.FdL.reserve_Einfahrt(copy_route.get(list_id).second().id(), this.id);
+            boolean reserved_place_second = FdL.reserve_Einfahrt(copy_route.get(list_id).second().id(), this.id);
             if (!reserved_place_second) {
                 avoid.add(copy_route.get(list_id).second());
                 reverse_reservation(save_reserved);
                 return avoid;
             }
-
-            //wenn allerdings nichts gefailed ist, dann das element aus copy_route entfernen, und weiter mit nächstem gleis
             copy_route.remove(list_id);
         }
 
         return avoid;
     }
 
+
+
+
     /**
-     * Macht die Reservierung eines Zuges bis zu einer bestimmten Stelle Rückgängig wenn nicht die ganze Strecke reservierbar ist
-     *
-     * @param save_reserved connections to be reversed
+     * Macht die Reservierung eines Zuges bis zu einer bestimmten Stelle Rückgängig wenn nicht die ganze Strecke reservierbar ist.
+     * @param save_reserved Connections die schon reserviert wurden.
      */
     private void reverse_reservation(List<Connection> save_reserved) {
         for (Connection c : save_reserved) {
@@ -203,22 +181,22 @@ public class Zug implements Runnable {
 
 
     /**
-     * Wenn die Route reserviert wurde, dann wird hier "gefahren" und Gleise und alle Zwischenstops freigegeben.
-     *
-     * @param route route to be driven
+     * Wenn die Route reserviert wurde, fahren und Gleise sowie alle Zwischenstops freigeben.
+     * @param route Route die zurückgelegt wird.
      */
     private void drive(List<Connection> route, Location goal) {
         List<Connection> copy_route = copy(route);
+        //Pause beenden fals Zwischenstop eingelegt
         if(paused){
             if (!act_position.isStation()) {
                 rec.resume(schedule, act_position);
             }
         }
-        while (!copy_route.isEmpty()) {
-            int next_gleis = -1;            //id in liste
-            int unique_gleis_id = -1;       //unique id overall
 
-            //finde das erste Gleis dass gefahren wird
+        //Fahren:
+        while (!copy_route.isEmpty()) {
+            int next_gleis = -1;
+            int unique_gleis_id = -1;
             for (Connection c : copy_route) {
                 if (c.first() == act_position || c.second() == act_position) {
                     next_gleis = copy_route.indexOf(c);
@@ -226,7 +204,7 @@ public class Zug implements Runnable {
                 }
             }
 
-            //find out if first or second are the act_position
+            //First or Second == Act-Position?
             Location desti;
             if (copy_route.get(next_gleis).first().equals(act_position)) {
                 desti = copy_route.get(next_gleis).second();
@@ -236,13 +214,13 @@ public class Zug implements Runnable {
 
             System.out.println(id + " wählt und fährt Gleis " + unique_gleis_id + " von " + act_position + " nach " + desti);
 
-            //unlocke den ersten ParkPlatz (man hat immernoch die Einfahrt reserviert)
+            //Unlock ersten ParkPlatz (immernoch Einfahrt reserviert)
             FdL.FreePlace(act_position.id(), id);
 
-            //recorder melden dass man jetzt leaved und Einfahrt frei machen
+            //Recorder melden dass man leaved
             rec.leave(schedule, act_position);
 
-            //travel anmelden und losfahren
+            //Travel anmelden, Einfahrt frei machen, fahren
             rec.travel(schedule, copy_route.get(next_gleis));
             FdL.free_Einfahrt(act_position.id(), id);
             try {
@@ -251,16 +229,15 @@ public class Zug implements Runnable {
                 e.printStackTrace();
             }
 
-            //Gleis freigeben und act_position ändern
+            //Arrive anmelden, evtl Pause anmelden, und Gleis freigeben
             rec.arrive(schedule, desti);
             if(desti == goal && !desti.isStation()){
                 rec.pause(schedule,desti);
                 paused = true;
             }
             FdL.UnlockGleis(unique_gleis_id, id);
-            act_position = desti;
 
-            //gefahrenes Gleis aus der Liste entfernen
+            act_position = desti;
             copy_route.remove(next_gleis);
         }
 
@@ -269,9 +246,10 @@ public class Zug implements Runnable {
         }
     }
 
+
+
     /**
      * Copy-funktin für eine Liste
-     *
      * @param route original-route zum Kopieren
      * @return Neue listem it kopiertem inhalt
      */
@@ -279,16 +257,18 @@ public class Zug implements Runnable {
         return new ArrayList<>(route);
     }
 
+
+
     /**
      * Findet die nächste Parkmöglichkeit auf dem Weg
-     *
-     * @param route
+     * @param route route auf dem ein freier platz gefunden werden soll
      * @return nächster freier Platz
      */
     private Location find_next_stop(List<Connection> route) {
         List<Connection> copy_route = copy(route);
         Location last_loc = act_position;
         Location next_loc = act_position;
+
         while (!copy_route.isEmpty()) {
             int list_id = 0;
             for (Connection c : copy_route) {
@@ -302,18 +282,16 @@ public class Zug implements Runnable {
 
                 }
             }
-
-            boolean reserved = false;
             if (next_loc.isStation()) {
                 if (next_loc.equals(destination)) {
-                    reserved = FdL.ReservePlace(next_loc.id(), id);
+                    boolean reserved = FdL.ReservePlace(next_loc.id(), id);
                     if (reserved) {
                         return next_loc;
                     }
                 }
             }else {
                 if (next_loc.capacity() > 0) {
-                    reserved = FdL.ReservePlace(next_loc.id(), id);
+                    boolean reserved = FdL.ReservePlace(next_loc.id(), id);
                     if (reserved) {
                         return next_loc;
                     }

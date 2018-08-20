@@ -30,6 +30,10 @@ public class GleisMonitor {
         return true;
     }
 
+    synchronized void reserveblocking(int train_id){
+
+    }
+
     /**
      * Gibt das Gleis wieder frei
      * @param train_id Kann nur freigebn wenn es auch der Zug ist der es reserviert hat
@@ -44,10 +48,4 @@ public class GleisMonitor {
     synchronized int getId(){
         return id;
     }
-
-    synchronized int getTrain_id(){
-        return train_id;
-    }
-
-    synchronized boolean getReserved() { return reserved; }
 }

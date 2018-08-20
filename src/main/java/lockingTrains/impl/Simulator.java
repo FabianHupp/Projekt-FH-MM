@@ -64,14 +64,13 @@ public class Simulator {
 	 * @return {@code true} if the simulation ran successfully.
 	 */
 	public static boolean run(final Problem problem, final Recorder recorder) {
-		//zuerst die Informationen des Problems auslesen
-		Map map = problem.map();
-		List<TrainSchedule> schedules = problem.schedules();
 
-		//erzeuge Monitor für jeden Bahnhof
+		List<TrainSchedule> schedules = problem.schedules();
+		Map map = problem.map();
+
+		//Erzeuge Monitor für jeden Stop
 		List<Location> locations = map.locations();
 		List<OwnMonitor> monitors = new ArrayList<>();
-
 		for(Location loc : locations){
 			if(loc.isStation()){
 				monitors.add(new OwnMonitor(-1, loc.id(),true));
@@ -84,37 +83,34 @@ public class Simulator {
 			}
 		}
 
-		//erzeuge Monitor für jedes Gleis und verteile ids für totale Ordnung
+		//Erzeuge Monitor für jedes Gleis
 		List<Connection> connections = map.connections();
-		List<GleisMonitor> gleise = new ArrayList<GleisMonitor>();
-
+		List<GleisMonitor> gleise = new ArrayList<>();
 		for(Connection con : connections){
 			gleise.add(new GleisMonitor(con.id()));
 		}
 
-
 		//Fahrtdienstleitung initialisieren
-		FahrtdienstLeitung FdL = new FahrtdienstLeitung(monitors, map, gleise, schedules.size(), recorder);
+		FahrtdienstLeitung FdL = new FahrtdienstLeitung(monitors, gleise, schedules.size());
 
 		//Züge initialisieren
-		List<Zug> züge = new ArrayList<Zug>();
-
+		List<Zug> zuege = new ArrayList<Zug>();
 		int i = 0;
 		for(TrainSchedule ts : schedules){
-			züge.add(new Zug(ts,i,map,FdL,recorder));
+			zuege.add(new Zug(ts,i,map,FdL,recorder));
 			i++;
 		}
 
-		//Threads starten
+		//Zug-Threads starten
 		List<Thread> zug_threads = new ArrayList<>();
-		for(Zug z : züge){
+		for(Zug z : zuege){
 			zug_threads.add(new Thread(z));
 		}
 		for(Thread th : zug_threads) {
 			th.start();
 		}
 
-		//warten bis alle Threads terminiert sind (join)
+		//Warten bis alle Threads terminiert sind (join)
 		for(Thread th :zug_threads){
 			try {
 				th.join();
@@ -123,7 +119,7 @@ public class Simulator {
 			}
 		}
 		System.out.println("Alle Threads terminiert");
-		//überprüft ob alle Züge angekommen sind
+		//Alle Züge agekommen?
 		if(FdL.checkDone()){
 			recorder.done();
 			return true;

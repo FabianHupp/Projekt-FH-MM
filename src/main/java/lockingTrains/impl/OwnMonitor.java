@@ -46,6 +46,10 @@ public class OwnMonitor {
             return false;
     }
 
+    synchronized void reserve_arrive_blocking(int traind_id){
+
+    }
+
     synchronized void free_arrive(int train_id){
                 if(train_id == lockedid){
                     locked = false;
