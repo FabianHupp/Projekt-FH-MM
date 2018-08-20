@@ -38,8 +38,23 @@ public class OwnMonitor {
      * Reserviert das Gleis für die einfahrenden/durchfahrenden Züge blockierend.
      * @param traind_id Id des reservierenden Zuges.
      */
-    synchronized void reserve_arrive_blocking(int traind_id){
-
+    synchronized void reserve_arrive_blocking(int train_i){
+        if(locked && !(train_i == lockedid)){
+            while(true){
+                try {
+                    this.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                if(!locked) {
+                    locked = true;
+                    lockedid = train_i;
+                    return;
+                }
+            }
+        }
+        lockedid = train_i;
+        locked = true;
     }
 
     /**
@@ -50,6 +65,7 @@ public class OwnMonitor {
                 if(train_id == lockedid){
                     locked = false;
                     lockedid = -1;
+                    notifyAll();
                 }
     }
 

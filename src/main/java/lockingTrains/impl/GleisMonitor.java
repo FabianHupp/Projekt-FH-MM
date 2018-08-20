@@ -19,15 +19,12 @@ public class GleisMonitor {
      */
     synchronized boolean reserve(int train_id){
         if(reserved){
-            if(this.train_id == train_id){
-                reserved = true;
-                return true;
-            }
-            return false;
+            return this.train_id == train_id;
+        }else {
+            this.train_id = train_id;
+            reserved = true;
+            return true;
         }
-        this.train_id = train_id;
-        reserved = true;
-        return true;
     }
 
     /**
@@ -61,8 +58,8 @@ public class GleisMonitor {
         if(this.train_id == train_id){
             reserved = false;
             this.train_id = -1;
+            notifyAll();
         }
-        notifyAll();
     }
 
 

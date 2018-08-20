@@ -77,6 +77,7 @@ public class Zug implements Runnable {
 
 
             //Schritt 3: nächsten Stellplatz finden und warten
+            avoid.clear();
             route = map.route(act_position, destination, empty_avoid_list);
             //Findet den nächsten stop und reserviert einen Platz
             Location nex_stop = find_next_stop(route);
@@ -283,12 +284,10 @@ public class Zug implements Runnable {
                 }
             }
             if (next_loc.isStation()) {
-                if (next_loc.equals(destination)) {
                     boolean reserved = FdL.ReservePlace(next_loc.id(), id);
                     if (reserved) {
                         return next_loc;
                     }
-                }
             }else {
                 if (next_loc.capacity() > 0) {
                     boolean reserved = FdL.ReservePlace(next_loc.id(), id);
