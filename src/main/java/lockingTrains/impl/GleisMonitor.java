@@ -2,20 +2,20 @@ package lockingTrains.impl;
 
 public class GleisMonitor {
 
-    private boolean reserved;       //gibt an ob das Gleis gerade reserved ist
-    private int id;                 //id des Gleises für die Totale Ordnung
-    private int train_id;           //id des Zuges der reserviert hat; -1 = kein Zug reserviert
+    private boolean reserved;       //Gleis reserviert?
+    private int train_id;           //Reservierender Zug
+    private int id;                 //Gleis-id
 
     public GleisMonitor(int id){
-        this.id = id;
-        this.train_id = -1;
         this.reserved = false;
+        this.train_id = -1;
+        this.id = id;
     }
 
     /**
      * Versucht einen Platz zu reservieren.
-     * @param train_id  Id des aufrufenden damit man nachher nachvollziehen kann wer was reserviert hat.
-     * @return true wenn reserviert wurde, false wenn es gescheitert ist.
+     * @param train_id  Id des Aufrufenden.
+     * @return true wenn reserviert wurde, false wenn nicht.
      */
     synchronized boolean reserve(int train_id){
         if(reserved){
@@ -30,20 +30,41 @@ public class GleisMonitor {
         return true;
     }
 
-    synchronized void reserveblocking(int train_id){
-
+    /**
+     * Reserviert Gleis wartend.
+     * @param train_i Id des Reservierenden.
+     */
+    synchronized void reserveblocking(int train_i){
+        if(reserved && !(train_i == train_id)){
+            while(true){
+                try {
+                    this.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                if(!reserved) {
+                    reserved = true;
+                    train_id = train_i;
+                    return;
+                }
+            }
+        }
+        train_id = train_i;
+        reserved = true;
     }
 
     /**
-     * Gibt das Gleis wieder frei
-     * @param train_id Kann nur freigebn wenn es auch der Zug ist der es reserviert hat
+     * Gibt das Gleis wieder frei.
+     * @param train_id Nur haltender Zug kann freigeben.
      */
     synchronized void free_track(int train_id){
         if(this.train_id == train_id){
             reserved = false;
             this.train_id = -1;
         }
+        notifyAll();
     }
+
 
     synchronized int getId(){
         return id;

@@ -179,7 +179,7 @@ public class FahrtdienstLeitung {
         }
         return m;
     }
-    
+
     /**
      * Hilfsmethode um Index des richtigen Stops in Gleis-Liste zu finden
      * @param gleisid zu findender gleis
