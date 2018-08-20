@@ -6,12 +6,11 @@ import java.util.List;
 public class OwnMonitor {
 
     private int capacity, reserved, lockedid, id;
-    private boolean ist_Parkplatz, locked;
     private List<Integer> train_ids;
+    private boolean locked;
 
-    public OwnMonitor (int cap, int i, boolean station_type){
+    public OwnMonitor (int cap, int i){
         train_ids = new ArrayList<>();
-        ist_Parkplatz = station_type;
         locked = false;
         capacity = cap;
         lockedid = -1;
@@ -39,19 +38,12 @@ public class OwnMonitor {
      * @param traind_id Id des reservierenden Zuges.
      */
     synchronized void reserve_arrive_blocking(int train_i){
-        if(locked && !(train_i == lockedid)){
-            while(true){
+        while(locked && !(train_i == lockedid)){
                 try {
-                    this.wait();
+                    wait();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                if(!locked) {
-                    locked = true;
-                    lockedid = train_i;
-                    return;
-                }
-            }
         }
         lockedid = train_i;
         locked = true;
@@ -98,7 +90,7 @@ public class OwnMonitor {
      */
     synchronized void free_space(int train_id){
         if(reserved > 0){
-            if(train_ids.contains(train_id)){
+           if(train_ids.contains(train_id)){
                 reserved--;
                 int a = -1;
                 for(Integer in : train_ids){
@@ -110,7 +102,7 @@ public class OwnMonitor {
                     train_ids.remove(a);
                 }
 
-            }
+           }
         }
     }
 

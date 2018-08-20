@@ -32,19 +32,12 @@ public class GleisMonitor {
      * @param train_i Id des Reservierenden.
      */
     synchronized void reserveblocking(int train_i){
-        if(reserved && !(train_i == train_id)){
-            while(true){
+        while(reserved && (train_i != train_id)){
                 try {
                     this.wait();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                if(!reserved) {
-                    reserved = true;
-                    train_id = train_i;
-                    return;
-                }
-            }
         }
         train_id = train_i;
         reserved = true;

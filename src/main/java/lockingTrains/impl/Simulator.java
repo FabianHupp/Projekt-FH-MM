@@ -73,12 +73,12 @@ public class Simulator {
 		List<OwnMonitor> monitors = new ArrayList<>();
 		for(Location loc : locations){
 			if(loc.isStation()){
-				monitors.add(new OwnMonitor(-1, loc.id(),true));
+				monitors.add(new OwnMonitor(-1, loc.id()));
 			}else{
 				if(loc.capacity() == 0) {
-					monitors.add(new OwnMonitor(0, loc.id(),false));
+					monitors.add(new OwnMonitor(0, loc.id()));
 				}else{
-					monitors.add(new OwnMonitor((loc.capacity()),loc.id(), true));
+					monitors.add(new OwnMonitor((loc.capacity()),loc.id()));
 				}
 			}
 		}

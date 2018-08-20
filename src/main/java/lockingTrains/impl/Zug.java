@@ -63,6 +63,7 @@ public class Zug implements Runnable {
                 List<Position> new_avoid = tryReserveRoute(route);
                 if (new_avoid.isEmpty()) {
                     drive(route, destination);
+                    System.out.println("Zug " + id + " ist gefahren und angekommen.");
                     FdL.isFinished();
                     rec.finish(schedule);
                     return;
@@ -98,13 +99,21 @@ public class Zug implements Runnable {
                 }
 
                 FdL.lockGleisBlocking(smallestId,this.id);
-                FdL.reserveEinfahrtBlocking(copy_route.get(list_id).first().id(), this.id);
-                FdL.reserveEinfahrtBlocking(copy_route.get(list_id).second().id(), this.id);
+                int firstid = copy_route.get(list_id).first().id();
+                int secondid = copy_route.get(list_id).second().id();
+                if(firstid < secondid){
+                    FdL.reserveEinfahrtBlocking(firstid, this.id);
+                    FdL.reserveEinfahrtBlocking(secondid, this.id);
+                }else{
+                    FdL.reserveEinfahrtBlocking(secondid, this.id);
+                    FdL.reserveEinfahrtBlocking(firstid, this.id);
+                }
                 copy_route.remove(list_id);
             }
             //Route reserviert
             drive(route,nex_stop);
             if(nex_stop == destination){
+                System.out.println("Zug " + id + " ist gefahren und angekommen.");
                 FdL.isFinished();
                 rec.finish(schedule);
                 return;
@@ -137,23 +146,30 @@ public class Zug implements Runnable {
             }
 
             //Gleis reservieren
+            Location first = copy_route.get(list_id).first();
+            Location sec = copy_route.get(list_id).second();
+
             boolean reserved = FdL.lockGleis(smallestId, this.id);
             if (reserved) {
                 save_reserved.add(copy_route.get(list_id));
             } else {
-                avoid.add(copy_route.get(list_id).first());
-                avoid.add(copy_route.get(list_id).second());
+                if(first != act_position){
+                    avoid.add(first);
+                }
+                if(sec != act_position){
+                    avoid.add(sec);
+                }
                 reverse_reservation(save_reserved);
                 return avoid;
             }
             //Locations reservieren
-            boolean reserved_place_first = FdL.reserve_Einfahrt(copy_route.get(list_id).first().id(), this.id);
+            boolean reserved_place_first = FdL.reserve_Einfahrt(first.id(), this.id);
             if (!reserved_place_first) {
-                avoid.add(copy_route.get(list_id).first());
+                avoid.add(first);
                 reverse_reservation(save_reserved);
                 return avoid;
             }
-            boolean reserved_place_second = FdL.reserve_Einfahrt(copy_route.get(list_id).second().id(), this.id);
+            boolean reserved_place_second = FdL.reserve_Einfahrt(sec.id(), this.id);
             if (!reserved_place_second) {
                 avoid.add(copy_route.get(list_id).second());
                 reverse_reservation(save_reserved);
