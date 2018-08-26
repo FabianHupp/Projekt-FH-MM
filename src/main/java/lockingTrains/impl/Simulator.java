@@ -67,28 +67,38 @@ public class Simulator {
 
 		List<TrainSchedule> schedules = problem.schedules();
 		Map map = problem.map();
+		int totalid = 0;
 
 		//Erzeuge Monitor für jeden Stop
 		List<Location> locations = map.locations();
 		List<OwnMonitor> monitors = new ArrayList<>();
+		List<GleisMonitor> gleise = new ArrayList<>();
 		for(Location loc : locations){
 			if(loc.isStation()){
-				monitors.add(new OwnMonitor(-1, loc.id()));
+				monitors.add(new OwnMonitor(-1, loc.id(), totalid));
+				gleise.add(new GleisMonitor(loc.id(), totalid, true));
+				totalid++;
 			}else{
 				if(loc.capacity() == 0) {
-					monitors.add(new OwnMonitor(0, loc.id()));
+					monitors.add(new OwnMonitor(0, loc.id(), totalid));
+					gleise.add(new GleisMonitor(loc.id(),totalid, true));
+					totalid++;
 				}else{
-					monitors.add(new OwnMonitor((loc.capacity()),loc.id()));
+					monitors.add(new OwnMonitor((loc.capacity()),loc.id(), totalid));
+					gleise.add(new GleisMonitor(loc.id(),totalid, true));
+					totalid++;
 				}
 			}
 		}
 
 		//Erzeuge Monitor für jedes Gleis
 		List<Connection> connections = map.connections();
-		List<GleisMonitor> gleise = new ArrayList<>();
 		for(Connection con : connections){
-			gleise.add(new GleisMonitor(con.id()));
+			gleise.add(new GleisMonitor(con.id(), totalid, false));
+			totalid++;
 		}
+
+
 
 		//Fahrtdienstleitung initialisieren
 		FahrtdienstLeitung FdL = new FahrtdienstLeitung(monitors, gleise, schedules.size());

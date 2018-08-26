@@ -4,12 +4,15 @@ public class GleisMonitor {
 
     private boolean reserved;       //Gleis reserviert?
     private int train_id;           //Reservierender Zug
-    private int id;                 //Gleis-id
+    private int id, totalid;                 //Gleis-id
+    private boolean einfahrt;               //Einfahrt?
 
-    public GleisMonitor(int id){
-        this.reserved = false;
-        this.train_id = -1;
-        this.id = id;
+    public GleisMonitor(int i, int totali, boolean einf){
+        reserved = false;
+        einfahrt = einf;
+        totalid = totali;
+        train_id = -1;
+        id = i;
     }
 
     /**
@@ -28,22 +31,6 @@ public class GleisMonitor {
     }
 
     /**
-     * Reserviert Gleis wartend.
-     * @param train_i Id des Reservierenden.
-     */
-    synchronized void reserveblocking(int train_i){
-        while(reserved && (train_i != train_id)){
-                try {
-                    this.wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-        }
-        train_id = train_i;
-        reserved = true;
-    }
-
-    /**
      * Gibt das Gleis wieder frei.
      * @param train_id Nur haltender Zug kann freigeben.
      */
@@ -51,7 +38,6 @@ public class GleisMonitor {
         if(this.train_id == train_id){
             reserved = false;
             this.train_id = -1;
-            notifyAll();
         }
     }
 
@@ -59,4 +45,8 @@ public class GleisMonitor {
     synchronized int getId(){
         return id;
     }
+
+    synchronized int getTotalid() {return totalid;}
+
+    synchronized boolean getIsEinfahrt(){return einfahrt;}
 }

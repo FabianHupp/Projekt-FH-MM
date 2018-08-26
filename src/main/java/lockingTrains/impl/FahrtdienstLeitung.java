@@ -1,22 +1,31 @@
 package lockingTrains.impl;
 
+import lockingTrains.shared.Connection;
+
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 
 public class FahrtdienstLeitung {
 
-    private Lock gleise_lock, location_lock, arrived_trains_lock;
+    private Lock gleise_lock, location_lock, einfahrten_lock, arrived_trains_lock, waitFdL;
     private int num_trains, arrived_trains;
     private List<OwnMonitor> locations;
     private List<GleisMonitor> gleise;
+    private List<Integer> gleisewaiting;
+    private Condition gleisfrei;
 
 
     FahrtdienstLeitung(List<OwnMonitor> loc, List<GleisMonitor> gle, int num_tra){
         arrived_trains_lock = new ReentrantLock();
+        einfahrten_lock = new ReentrantLock();
         location_lock = new ReentrantLock();
         gleise_lock = new ReentrantLock();
+        waitFdL = new ReentrantLock();
+        gleisfrei = waitFdL.newCondition();
         num_trains = num_tra;
         arrived_trains = 0;
         locations = loc;
@@ -39,16 +48,6 @@ public class FahrtdienstLeitung {
     }
 
     /**
-     * Lockt ein Gleis blockierend.
-     * @param gleisid   zu reservierendes Gleis
-     * @param train_id  id des reservierenden
-     */
-    public void lockGleisBlocking(int gleisid, int train_id) {
-        GleisMonitor gm = getGleisMonitor(gleisid);
-        gm.reserveblocking(train_id);
-    }
-
-    /**
      * Gibt ein Gleis frei.
      * @param gleisid   freizugebendes Gleis
      * @param train_id  zug der freigibt
@@ -56,7 +55,12 @@ public class FahrtdienstLeitung {
     public void UnlockGleis(int gleisid, int train_id) {
         GleisMonitor gm = getGleisMonitor(gleisid);
         gm.free_track(train_id);
-
+        waitFdL.lock();
+        try{
+            gleisfrei.signalAll();
+        }finally{
+            waitFdL.unlock();
+        }
     }
 
 
@@ -82,7 +86,6 @@ public class FahrtdienstLeitung {
     public void FreePlace(int stopid, int train_id) {
         OwnMonitor om = getLocationMonitor(stopid);
         om.free_space(train_id);
-
     }
 
 
@@ -96,18 +99,8 @@ public class FahrtdienstLeitung {
      * @return true wenn reservieren geklappt hat, false falls wenn nicht
      */
     public boolean reserve_Einfahrt(int stopid, int train_id) {
-        OwnMonitor om = getLocationMonitor(stopid);
-        return om.reserve_arrive(train_id);
-    }
-
-    /**
-     * Reserviert das Ein-/Durchfahrtsgleis eines Stops blockierend.
-     * @param stopid an dem reserviert wird
-     * @param train_id zug der reservieren will
-     */
-    public void reserveEinfahrtBlocking(int stopid, int train_id) {
-        OwnMonitor om = getLocationMonitor(stopid);
-        om.reserve_arrive_blocking(train_id);
+        GleisMonitor em = getEinfahrtMonitor(stopid);
+        return em.reserve(train_id);
     }
 
     /**
@@ -116,8 +109,14 @@ public class FahrtdienstLeitung {
      * @param train_id zug der freigibt
      */
     public void free_Einfahrt(int stopid, int train_id) {
-        OwnMonitor om = getLocationMonitor(stopid);
-        om.free_arrive(train_id);
+        GleisMonitor em = getEinfahrtMonitor(stopid);
+        em.free_track(train_id);
+        waitFdL.lock();
+        try{
+            gleisfrei.signalAll();
+        }finally{
+            waitFdL.unlock();
+        }
     }
 
 
@@ -159,11 +158,11 @@ public class FahrtdienstLeitung {
     //-------------- Hilfsmethoden:
 
     /**
-     * Hilfsmethode um Index des richtigen Stops in der Stop-Liste zu finden
+     * Hilfsmethode um Index des richtigen Stops in der Stop-Liste zu finden.
      * @param stopid zu findender stop
      * @return Monitor der Location in Liste
      */
-    private OwnMonitor getLocationMonitor(int stopid) {
+    public OwnMonitor getLocationMonitor(int stopid) {
         OwnMonitor m;
         int correct_monitor = -1;
         for (OwnMonitor om : locations) {
@@ -181,15 +180,17 @@ public class FahrtdienstLeitung {
     }
 
     /**
-     * Hilfsmethode um Index des richtigen Stops in Gleis-Liste zu finden
-     * @param gleisid zu findender gleis
+     * Hilfsmethode um Index des richtigen Stops in Gleis-Liste zu finden.
+     * @param gleisid zu findendes gleis
      * @return Monitor des Gleises in Liste
      */
-    private GleisMonitor getGleisMonitor(int gleisid) {
+    public GleisMonitor getGleisMonitor(int gleisid) {
         int correct_gleis = -1;
         for (GleisMonitor gm : gleise) {
-            if (gm.getId() == gleisid) {
-                correct_gleis = gleise.indexOf(gm);
+            if(!gm.getIsEinfahrt()){
+                if (gm.getId() == gleisid) {
+                    correct_gleis = gleise.indexOf(gm);
+                }
             }
         }
         GleisMonitor m;
@@ -200,5 +201,48 @@ public class FahrtdienstLeitung {
             gleise_lock.unlock();
         }
         return m;
+    }
+
+    /**
+     * Hilfsmethode um Index der richtigen Einfahrt in Einfahrt-Liste zu finden.
+     * @param einfahrtid zu findende Einfahrt
+     * @return Monitor der Einfahrt in Liste
+     */
+    public GleisMonitor getEinfahrtMonitor(int einfahrtid){
+        int correct_gleis = -1;
+        for(GleisMonitor gm : gleise){
+           if(gm.getIsEinfahrt()){
+               if(gm.getId() == einfahrtid){
+                   correct_gleis = gleise.indexOf(gm);
+               }
+           }
+        }
+        GleisMonitor m;
+        gleise_lock.lock();
+        try{
+            m = gleise.get(correct_gleis);
+        }finally{
+            gleise_lock.unlock();
+        }
+        return m;
+    }
+
+
+    public List<GleisMonitor> getRoute(List<Connection> route){
+        List<GleisMonitor> ret = new ArrayList<>();
+        for(Connection c : route){
+            ret.add(getGleisMonitor(c.id()));
+            ret.add(getEinfahrtMonitor(c.first().id()));
+            ret.add(getEinfahrtMonitor(c.second().id()));
+        }
+        return ret;
+    }
+
+    public Condition getGleisfrei() {
+        return gleisfrei;
+    }
+
+    public Lock getWaitFdL() {
+        return waitFdL;
     }
 }

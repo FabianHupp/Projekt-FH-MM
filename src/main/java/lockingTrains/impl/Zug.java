@@ -1,5 +1,6 @@
 package lockingTrains.impl;
 
+import javafx.geometry.Pos;
 import lockingTrains.shared.*;
 import lockingTrains.validation.Recorder;
 
@@ -7,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class Zug implements Runnable {
 
@@ -14,12 +16,16 @@ public class Zug implements Runnable {
     private boolean paused = false;
     private TrainSchedule schedule;
     private FahrtdienstLeitung FdL;
+    private Condition gleisreble;
+    private Lock waitFdL;
     private Recorder rec;
     private Map map;
     private int id;
 
     Zug(TrainSchedule sched, int i, Map m, FahrtdienstLeitung fahrtdl, Recorder recorder) {
+        gleisreble = fahrtdl.getGleisfrei();
         destination = sched.destination();
+        waitFdL = fahrtdl.getWaitFdL();
         act_position = sched.origin();
         schedule = sched;
         rec = recorder;
@@ -44,6 +50,7 @@ public class Zug implements Runnable {
                 rec.finish(schedule);
                 return;
             }
+            System.out.println("Schritt1 id: " + id);
             //Es gibt eine reservierbare route
             List<Position> avoid = tryReserveRoute(route);
             if (avoid.isEmpty()) {
@@ -54,8 +61,7 @@ public class Zug implements Runnable {
                 return;
             }
 
-
-
+            System.out.println("Schritt2 id: " + id);
             //Schritt 2: Reservieren hat nicht geklappt => nochmal mit avoid-liste
             route = map.route(act_position, destination, avoid);
             //Solange eine route gefunden wird:
@@ -63,7 +69,6 @@ public class Zug implements Runnable {
                 List<Position> new_avoid = tryReserveRoute(route);
                 if (new_avoid.isEmpty()) {
                     drive(route, destination);
-                    System.out.println("Zug " + id + " ist gefahren und angekommen.");
                     FdL.isFinished();
                     rec.finish(schedule);
                     return;
@@ -75,8 +80,7 @@ public class Zug implements Runnable {
                 route = map.route(act_position, destination, avoid);
             }
 
-
-
+            System.out.println("Schritt3 id: " + id);
             //Schritt 3: nächsten Stellplatz finden und warten
             avoid.clear();
             route = map.route(act_position, destination, empty_avoid_list);
@@ -87,32 +91,45 @@ public class Zug implements Runnable {
 
 
             //Streckenteile bei FdL reservieren und blockierend warten wenn nicht frei
-            List<Connection> copy_route = copy(route);
-            while(!copy_route.isEmpty()){
+            boolean reserved;
+            List<GleisMonitor> rou = FdL.getRoute(route);
+
+            while(!rou.isEmpty()){
                 int list_id = 0;
-                int smallestId = copy_route.get(0).id();
-                for (Connection c : copy_route) {
-                    if (c.id() < smallestId) {
-                        smallestId = c.id();
-                        list_id = copy_route.indexOf(c);
+                int smallest_total_id = rou.get(0).getTotalid();
+                int smallestid = rou.get(0).getId();
+                boolean einfahrt = rou.get(0).getIsEinfahrt();
+                for(GleisMonitor gm : rou){
+                    int gmid = gm.getTotalid();
+                    if(gmid < smallest_total_id){
+                        smallestid = gm.getId();
+                        smallest_total_id = gmid;
+                        list_id = rou.indexOf(gm);
+                        einfahrt = gm.getIsEinfahrt();
                     }
                 }
-
-                FdL.lockGleisBlocking(smallestId,this.id);
-                int firstid = copy_route.get(list_id).first().id();
-                int secondid = copy_route.get(list_id).second().id();
-                if(firstid < secondid){
-                    FdL.reserveEinfahrtBlocking(firstid, this.id);
-                    FdL.reserveEinfahrtBlocking(secondid, this.id);
-                }else{
-                    FdL.reserveEinfahrtBlocking(secondid, this.id);
-                    FdL.reserveEinfahrtBlocking(firstid, this.id);
+                reserved = false;
+                while(!reserved) {
+                    if (!einfahrt) {
+                        reserved = FdL.lockGleis(smallestid, id);
+                    }else{
+                        reserved = FdL.reserve_Einfahrt(smallestid, id);
+                    }
+                    if (!reserved) {
+                        waitFdL.lock();
+                        try {
+                            gleisreble.await();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
-                copy_route.remove(list_id);
+                rou.remove(list_id);
             }
+
             //Route reserviert
             drive(route,nex_stop);
-            if(nex_stop == destination){
+            if(act_position.equals(destination)){
                 System.out.println("Zug " + id + " ist gefahren und angekommen.");
                 FdL.isFinished();
                 rec.finish(schedule);
@@ -131,53 +148,45 @@ public class Zug implements Runnable {
      *         die avoided werden sollen wenn dem nicht der fall ist
      */
     private List<Position> tryReserveRoute(List<Connection> route) {
-        List<Connection> save_reserved = new ArrayList<>();
-        List<Connection> copy_route = copy(route);
+        List<GleisMonitor> save_reserved = new ArrayList<>();
+        List<GleisMonitor> rou = FdL.getRoute(route);
         List<Position> avoid = new ArrayList<>();
-
-        while (!copy_route.isEmpty()) {
-            int list_id = 0;                            //eindeutige position in der Liste
-            int smallestId = copy_route.get(0).id();    //niedrigste id der Gleise
-            for (Connection c : copy_route) {
-                if (c.id() < smallestId) {
-                    smallestId = c.id();
-                    list_id = copy_route.indexOf(c);
+        boolean reserved = false;
+        while(!rou.isEmpty()){
+            int list_id = 0;
+            int smallest_total_id = rou.get(0).getTotalid();
+            int smallestid = rou.get(0).getId();
+            boolean einfahrt = rou.get(0).getIsEinfahrt();
+            for(GleisMonitor gm : rou){
+                int gmid = gm.getTotalid();
+                if(gmid < smallest_total_id){
+                    smallestid = gm.getId();
+                    smallest_total_id = gmid;
+                    list_id = rou.indexOf(gm);
+                    einfahrt = gm.getIsEinfahrt();
                 }
             }
 
-            //Gleis reservieren
-            Location first = copy_route.get(list_id).first();
-            Location sec = copy_route.get(list_id).second();
+            if(!einfahrt){
+                reserved = FdL.lockGleis(smallestid,id);
+            }else{
+                reserved = FdL.reserve_Einfahrt(smallestid,id);
+            }
 
-            boolean reserved = FdL.lockGleis(smallestId, this.id);
-            if (reserved) {
-                save_reserved.add(copy_route.get(list_id));
-            } else {
-                if(first != act_position){
-                    avoid.add(first);
+            if(reserved){
+                save_reserved.add(rou.get(list_id));
+            }else{
+                reverse_reservation(save_reserved);
+                if(einfahrt){
+                    avoid.add(getPosEin(smallestid));
+                }else{
+                    avoid.addAll(getPosGleis(smallestid));
                 }
-                if(sec != act_position){
-                    avoid.add(sec);
-                }
-                reverse_reservation(save_reserved);
                 return avoid;
             }
-            //Locations reservieren
-            boolean reserved_place_first = FdL.reserve_Einfahrt(first.id(), this.id);
-            if (!reserved_place_first) {
-                avoid.add(first);
-                reverse_reservation(save_reserved);
-                return avoid;
-            }
-            boolean reserved_place_second = FdL.reserve_Einfahrt(sec.id(), this.id);
-            if (!reserved_place_second) {
-                avoid.add(copy_route.get(list_id).second());
-                reverse_reservation(save_reserved);
-                return avoid;
-            }
-            copy_route.remove(list_id);
+
+            rou.remove(list_id);
         }
-
         return avoid;
     }
 
@@ -188,11 +197,13 @@ public class Zug implements Runnable {
      * Macht die Reservierung eines Zuges bis zu einer bestimmten Stelle Rückgängig wenn nicht die ganze Strecke reservierbar ist.
      * @param save_reserved Connections die schon reserviert wurden.
      */
-    private void reverse_reservation(List<Connection> save_reserved) {
-        for (Connection c : save_reserved) {
-            FdL.UnlockGleis(c.id(), this.id);
-            FdL.free_Einfahrt(c.first().id(), this.id);
-            FdL.free_Einfahrt(c.second().id(), this.id);
+    private void reverse_reservation(List<GleisMonitor> save_reserved){
+        for (GleisMonitor c : save_reserved) {
+            if(c.getIsEinfahrt()){
+                FdL.free_Einfahrt(c.getId(),id);
+            }else{
+                FdL.UnlockGleis(c.getId(),id);
+            }
         }
     }
 
@@ -209,7 +220,6 @@ public class Zug implements Runnable {
                 rec.resume(schedule, act_position);
             }
         }
-
         //Fahren:
         while (!copy_route.isEmpty()) {
             int next_gleis = -1;
@@ -220,7 +230,6 @@ public class Zug implements Runnable {
                     unique_gleis_id = c.id();
                 }
             }
-
             //First or Second == Act-Position?
             Location desti;
             if (copy_route.get(next_gleis).first().equals(act_position)) {
@@ -228,15 +237,11 @@ public class Zug implements Runnable {
             } else {
                 desti = copy_route.get(next_gleis).first();
             }
-
             System.out.println(id + " wählt und fährt Gleis " + unique_gleis_id + " von " + act_position + " nach " + desti);
-
             //Unlock ersten ParkPlatz (immernoch Einfahrt reserviert)
             FdL.FreePlace(act_position.id(), id);
-
             //Recorder melden dass man leaved
             rec.leave(schedule, act_position);
-
             //Travel anmelden, Einfahrt frei machen, fahren
             rec.travel(schedule, copy_route.get(next_gleis));
             FdL.free_Einfahrt(act_position.id(), id);
@@ -245,7 +250,6 @@ public class Zug implements Runnable {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-
             //Arrive anmelden, evtl Pause anmelden, und Gleis freigeben
             rec.arrive(schedule, desti);
             if(desti == goal && !desti.isStation()){
@@ -253,12 +257,12 @@ public class Zug implements Runnable {
                 paused = true;
             }
             FdL.UnlockGleis(unique_gleis_id, id);
-
             act_position = desti;
             copy_route.remove(next_gleis);
         }
 
         if (act_position == goal) {
+            System.out.println("reached_goal_drive: id: " + id);
             FdL.free_Einfahrt(goal.id(), id);
         }
     }
@@ -285,7 +289,6 @@ public class Zug implements Runnable {
         List<Connection> copy_route = copy(route);
         Location last_loc = act_position;
         Location next_loc = act_position;
-
         while (!copy_route.isEmpty()) {
             int list_id = 0;
             for (Connection c : copy_route) {
@@ -312,12 +315,31 @@ public class Zug implements Runnable {
                     }
                 }
             }
-
             last_loc = next_loc;
             copy_route.remove(list_id);
-
         }
         return next_loc;
     }
 
+
+    private Location getPosEin(int locid){
+        Location ret = new Location("dummy", Location.Capacity.INFINITE, 0, 0);
+        for(Location l : map.locations()){
+            if(l.id() == locid){
+                ret = l;
+            }
+        }
+        return ret;
+    }
+
+    private List<Location> getPosGleis(int gleisid){
+        List<Location> ret = new ArrayList<>();
+        for(Connection c : map.connections()){
+            if(c.id() == gleisid){
+                ret.add(c.first());
+                ret.add(c.second());
+            }
+        }
+        return ret;
+    }
 }

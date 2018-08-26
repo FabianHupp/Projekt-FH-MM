@@ -5,62 +5,16 @@ import java.util.List;
 
 public class OwnMonitor {
 
-    private int capacity, reserved, lockedid, id;
+    private int capacity, reserved, id, totalid;
     private List<Integer> train_ids;
-    private boolean locked;
 
-    public OwnMonitor (int cap, int i){
+    public OwnMonitor (int cap, int i, int totali){
         train_ids = new ArrayList<>();
-        locked = false;
+        totalid = totali;
         capacity = cap;
-        lockedid = -1;
         reserved = 0;
         id = i;
     }
-
-    /**
-     * Reserviert das Gleis für die einfahrenden/durchfahrenden Züge.
-     * @param train_id  Id des reservierenden Zuges.
-     * @return  Reservierung geklappt?
-     */
-    synchronized boolean reserve_arrive(int train_id){
-            if(locked){
-                return lockedid == train_id;
-            }else{
-                locked = true;
-                lockedid = train_id;
-                return true;
-            }
-    }
-
-    /**
-     * Reserviert das Gleis für die einfahrenden/durchfahrenden Züge blockierend.
-     * @param traind_id Id des reservierenden Zuges.
-     */
-    synchronized void reserve_arrive_blocking(int train_i){
-        while(locked && !(train_i == lockedid)){
-                try {
-                    wait();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-        }
-        lockedid = train_i;
-        locked = true;
-    }
-
-    /**
-     * Gibt das Ein-/Durchfahrtsgleis frei.
-     * @param train_id  Id des Freigebenden.
-     */
-    synchronized void free_arrive(int train_id){
-                if(train_id == lockedid){
-                    locked = false;
-                    lockedid = -1;
-                    notifyAll();
-                }
-    }
-
 
     /**
      * Versucht einen ParkPlatz im Bahnhof/Knotenpunkt zu reservieren.
@@ -107,6 +61,8 @@ public class OwnMonitor {
     }
 
     synchronized int getId(){return this.id;}
+
+    synchronized int getTotalid(){return this.totalid;}
 
     synchronized int getCapacity(){return this.capacity; }
 }
