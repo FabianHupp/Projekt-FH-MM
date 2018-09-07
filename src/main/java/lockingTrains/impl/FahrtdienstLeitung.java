@@ -4,26 +4,22 @@ import lockingTrains.shared.Connection;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 
 public class FahrtdienstLeitung {
 
-    private Lock gleise_lock, location_lock, arrived_trains_lock, waitFdL;
+    private Lock gleise_lock, location_lock, arrived_trains_lock;
     private int num_trains, arrived_trains;
     private List<OwnMonitor> locations;
     private List<GleisMonitor> gleise;
-    private Condition gleisfrei;
 
 
     FahrtdienstLeitung(List<OwnMonitor> loc, List<GleisMonitor> gle, int num_tra){
         arrived_trains_lock = new ReentrantLock();
         location_lock = new ReentrantLock();
         gleise_lock = new ReentrantLock();
-        waitFdL = new ReentrantLock();
-        gleisfrei = waitFdL.newCondition();
         num_trains = num_tra;
         arrived_trains = 0;
         locations = loc;
@@ -58,12 +54,6 @@ public class FahrtdienstLeitung {
     public void UnlockGleis(int gleisid, int train_id) {
         GleisMonitor gm = getGleisMonitor(gleisid);
         gm.free_track(train_id);
-        waitFdL.lock();
-        try{
-            gleisfrei.signalAll();
-        }finally{
-            waitFdL.unlock();
-        }
     }
 
 
@@ -119,12 +109,6 @@ public class FahrtdienstLeitung {
     public void free_Einfahrt(int stopid, int train_id) {
         GleisMonitor em = getEinfahrtMonitor(stopid);
         em.free_track(train_id);
-        waitFdL.lock();
-        try{
-            gleisfrei.signalAll();
-        }finally{
-            waitFdL.unlock();
-        }
     }
 
 

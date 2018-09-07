@@ -241,7 +241,6 @@ public class Zug implements Runnable {
         }
 
         if (act_position == goal) {
-            System.out.println("reached_goal_drive: id: " + id);
             FdL.free_Einfahrt(goal.id(), id);
         }
     }

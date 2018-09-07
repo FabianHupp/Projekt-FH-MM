@@ -5,12 +5,11 @@ import java.util.List;
 
 public class OwnMonitor {
 
-    private int capacity, reserved, id, totalid;
+    private int capacity, reserved, id;
     private List<Integer> train_ids;
 
-    public OwnMonitor (int cap, int i, int totali){
+    public OwnMonitor (int cap, int i){
         train_ids = new ArrayList<>();
-        totalid = totali;
         capacity = cap;
         reserved = 0;
         id = i;
@@ -38,36 +37,6 @@ public class OwnMonitor {
         return false;
     }
 
-    synchronized void reserve_blocking(int train_id){
-        if(train_ids.contains(train_id)){
-            return;
-        }
-        if(capacity == -1){
-            reserved++;
-            train_ids.add(train_id);
-            return;
-        }
-        if(reserved<capacity){
-            reserved++;
-            train_ids.add(train_id);
-            return;
-        }
-
-        while (! train_ids.contains(train_id)) {
-            try {
-                wait();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            if(reserved < capacity){
-                reserved++;
-                train_ids.add(train_id);
-                return;
-            }
-
-        }
-    }
-
     /**
      * Gibt einen Parkplatz frei.
      * @param train_id  Id des verlassenden Zuges.
@@ -91,8 +60,6 @@ public class OwnMonitor {
     }
 
     synchronized int getId(){return this.id;}
-
-    synchronized int getTotalid(){return this.totalid;}
 
     synchronized int getCapacity(){return this.capacity; }
 }

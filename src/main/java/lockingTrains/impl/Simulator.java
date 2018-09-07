@@ -75,16 +75,16 @@ public class Simulator {
 		List<GleisMonitor> gleise = new ArrayList<>();
 		for(Location loc : locations){
 			if(loc.isStation()){
-				monitors.add(new OwnMonitor(-1, loc.id(), totalid));
+				monitors.add(new OwnMonitor(-1, loc.id()));
 				gleise.add(new GleisMonitor(loc.id(), totalid, true));
 				totalid++;
 			}else{
 				if(loc.capacity() == 0) {
-					monitors.add(new OwnMonitor(0, loc.id(), totalid));
+					monitors.add(new OwnMonitor(0, loc.id()));
 					gleise.add(new GleisMonitor(loc.id(),totalid, true));
 					totalid++;
 				}else{
-					monitors.add(new OwnMonitor((loc.capacity()),loc.id(), totalid));
+					monitors.add(new OwnMonitor((loc.capacity()),loc.id()));
 					gleise.add(new GleisMonitor(loc.id(),totalid, true));
 					totalid++;
 				}
