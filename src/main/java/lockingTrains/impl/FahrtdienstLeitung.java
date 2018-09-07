@@ -11,17 +11,15 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class FahrtdienstLeitung {
 
-    private Lock gleise_lock, location_lock, einfahrten_lock, arrived_trains_lock, waitFdL;
+    private Lock gleise_lock, location_lock, arrived_trains_lock, waitFdL;
     private int num_trains, arrived_trains;
     private List<OwnMonitor> locations;
     private List<GleisMonitor> gleise;
-    private List<Integer> gleisewaiting;
     private Condition gleisfrei;
 
 
     FahrtdienstLeitung(List<OwnMonitor> loc, List<GleisMonitor> gle, int num_tra){
         arrived_trains_lock = new ReentrantLock();
-        einfahrten_lock = new ReentrantLock();
         location_lock = new ReentrantLock();
         gleise_lock = new ReentrantLock();
         waitFdL = new ReentrantLock();
@@ -45,6 +43,11 @@ public class FahrtdienstLeitung {
     public boolean lockGleis(int gleisid, int train_id) {
         GleisMonitor gm = getGleisMonitor(gleisid);
         return gm.reserve(train_id);
+    }
+
+    public void lock_Gleis_block(int gleisid, int train_id){
+        GleisMonitor gm = getGleisMonitor(gleisid);
+        gm.reserve_blocking(train_id);
     }
 
     /**
@@ -101,6 +104,11 @@ public class FahrtdienstLeitung {
     public boolean reserve_Einfahrt(int stopid, int train_id) {
         GleisMonitor em = getEinfahrtMonitor(stopid);
         return em.reserve(train_id);
+    }
+
+    public void reserve_Einfahrt_block(int stopid, int train_id){
+        GleisMonitor em = getEinfahrtMonitor(stopid);
+        em.reserve_blocking(train_id);
     }
 
     /**
@@ -236,13 +244,5 @@ public class FahrtdienstLeitung {
             ret.add(getEinfahrtMonitor(c.second().id()));
         }
         return ret;
-    }
-
-    public Condition getGleisfrei() {
-        return gleisfrei;
-    }
-
-    public Lock getWaitFdL() {
-        return waitFdL;
     }
 }

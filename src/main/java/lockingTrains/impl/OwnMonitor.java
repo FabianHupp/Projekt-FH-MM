@@ -38,6 +38,36 @@ public class OwnMonitor {
         return false;
     }
 
+    synchronized void reserve_blocking(int train_id){
+        if(train_ids.contains(train_id)){
+            return;
+        }
+        if(capacity == -1){
+            reserved++;
+            train_ids.add(train_id);
+            return;
+        }
+        if(reserved<capacity){
+            reserved++;
+            train_ids.add(train_id);
+            return;
+        }
+
+        while (! train_ids.contains(train_id)) {
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            if(reserved < capacity){
+                reserved++;
+                train_ids.add(train_id);
+                return;
+            }
+
+        }
+    }
+
     /**
      * Gibt einen Parkplatz frei.
      * @param train_id  Id des verlassenden Zuges.
@@ -55,7 +85,7 @@ public class OwnMonitor {
                 if(a != -1){
                     train_ids.remove(a);
                 }
-
+                notifyAll();
            }
         }
     }

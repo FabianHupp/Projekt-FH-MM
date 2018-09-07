@@ -30,6 +30,29 @@ public class GleisMonitor {
         }
     }
 
+    synchronized void reserve_blocking(int train_i){
+        if(reserved){
+            if(train_i == train_id){
+                return;
+            }
+            while(!(reserved && (train_i == train_id))){
+                try {
+                    wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                if(!reserved){
+                    this.train_id = train_i;
+                    reserved = true;
+                }
+            }
+
+        }else{
+            this.train_id = train_i;
+            reserved = true;
+        }
+    }
+
     /**
      * Gibt das Gleis wieder frei.
      * @param train_id Nur haltender Zug kann freigeben.
@@ -38,6 +61,7 @@ public class GleisMonitor {
         if(this.train_id == train_id){
             reserved = false;
             this.train_id = -1;
+            notifyAll();
         }
     }
 
